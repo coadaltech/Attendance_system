@@ -1,4 +1,5 @@
-const BASE = 'http://localhost:3000/api'
+import { PUBLIC_API_URL } from '$env/static/public'
+const BASE = PUBLIC_API_URL
 
 function getToken() {
   if (typeof localStorage === 'undefined') return null
