@@ -1,5 +1,5 @@
 import { PUBLIC_API_URL } from '$env/static/public'
-const BASE = PUBLIC_API_URL
+const BASE = PUBLIC_API_URL ?? 'http://localhost:3000/api'
 
 function getToken() {
   if (typeof localStorage === 'undefined') return null
@@ -105,6 +105,7 @@ export const api = {
   updateEmployee: (id: number, data: any) =>
     request<any>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   toggleEmployee: (id: number) => request(`/employees/${id}/toggle`, { method: 'PATCH' }),
+  resetAllData: () => request('/employees/reset-all', { method: 'DELETE' }),
 
   // Holidays
   getHolidays: (year?: number) => {

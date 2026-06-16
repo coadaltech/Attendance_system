@@ -3,7 +3,6 @@
   import { user, isAdmin } from '$lib/stores/auth'
   import { api } from '$lib/api'
   import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte'
-  import PunchCard from '$lib/components/PunchCard.svelte'
   import StatsCard from '$lib/components/StatsCard.svelte'
   import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X } from 'lucide-svelte'
   import { formatDate, formatTime, getLeaveTypeBadge } from '$lib/utils'
@@ -15,7 +14,6 @@
   let currentYear = new Date().getFullYear()
 
   // employee-only
-  let todayRecord: any = null
   let summary: any = null
   let leaveBalance: any = null
   let attendanceHistory: any[] = []
@@ -51,18 +49,16 @@
   }
 
   async function loadEmployee(year: number, month: number) {
-    const [hist, sum, hols, lb, today] = await Promise.all([
+    const [hist, sum, hols, lb] = await Promise.all([
       api.getAttendanceHistory(month, year),
       api.getAttendanceSummary(month, year),
       api.getHolidays(year),
       api.getLeaveBalance(year),
-      api.getTodayAttendance(),
     ])
     attendanceHistory = hist
     summary = sum
     holidays = hols
     leaveBalance = lb
-    todayRecord = today
   }
 
   onMount(async () => {
@@ -75,11 +71,6 @@
   function onMonthChange(y: number, m: number) {
     currentYear = y; currentMonth = m
     if (!$isAdmin) loadEmployee(y, m)
-  }
-
-  function onPunchUpdate(record: any) {
-    todayRecord = record
-    loadEmployee(currentYear, currentMonth)
   }
 
   async function approveLeave(id: number) {
@@ -147,9 +138,13 @@
               <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                      {emp.name.charAt(0)}
-                    </div>
+                    {#if emp.avatar}
+                      <img src={emp.avatar} alt={emp.name} class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                    {:else}
+                      <div class="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {emp.name.charAt(0)}
+                      </div>
+                    {/if}
                     <div>
                       <p class="text-sm font-medium text-gray-900">{emp.name}</p>
                       <p class="text-xs text-gray-400">{emp.employeeCode}</p>
@@ -258,33 +253,10 @@
         sub="days remaining" color="yellow" icon={Umbrella} />
     </div>
 
-    <div class="grid lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-1 space-y-4">
-        <PunchCard {todayRecord} onUpdate={onPunchUpdate} />
-        {#if holidays.filter(h => new Date(h.date) >= new Date()).length > 0}
-          <div class="card">
-            <h3 class="font-semibold text-gray-900 mb-3">Upcoming Holidays</h3>
-            <div class="space-y-2">
-              {#each holidays.filter(h => new Date(h.date) >= new Date()).slice(0, 4) as h}
-                <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div>
-                    <p class="text-sm font-medium text-gray-800">{h.name}</p>
-                    <p class="text-xs text-gray-400">{formatDate(h.date)}</p>
-                  </div>
-                  <span class="badge badge-blue">Holiday</span>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
-      <div class="lg:col-span-2">
-        <AttendanceCalendar
-          year={currentYear} month={currentMonth}
-          {attendanceMap} {holidayMap}
-          onMonthChange={onMonthChange} />
-      </div>
-    </div>
+    <AttendanceCalendar
+      year={currentYear} month={currentMonth}
+      {attendanceMap} {holidayMap}
+      onMonthChange={onMonthChange} />
   {/if}
 </div>
 

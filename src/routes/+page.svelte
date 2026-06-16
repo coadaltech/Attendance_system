@@ -73,22 +73,6 @@
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
-
-      <div class="mt-6 pt-6 border-t border-gray-100">
-        <p class="text-xs text-gray-400 text-center">Demo credentials</p>
-        <div class="grid grid-cols-2 gap-2 mt-2">
-          <button on:click={() => { email = 'admin@coadal.com'; password = 'password123' }}
-            class="text-xs bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg text-gray-600 transition-colors text-left">
-            <span class="font-medium block">Admin</span>
-            admin@coadal.com
-          </button>
-          <button on:click={() => { email = 'rahul@coadal.com'; password = 'password123' }}
-            class="text-xs bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg text-gray-600 transition-colors text-left">
-            <span class="font-medium block">Employee</span>
-            rahul@coadal.com
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </div>

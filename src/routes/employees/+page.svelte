@@ -4,7 +4,10 @@
   import { isAdmin } from '$lib/stores/auth'
   import { api } from '$lib/api'
   import { formatDate, formatTime, formatHours, getStatusBadge } from '$lib/utils'
-  import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search } from 'lucide-svelte'
+  import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search, Trash2 } from 'lucide-svelte'
+  import AvatarUpload from '$lib/components/AvatarUpload.svelte'
+  import { user as currentUser } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth'
 
   let showPassword = false
 
@@ -17,6 +20,83 @@
   let search = ''
   let formError = ''
   let submitting = false
+
+  let showAdminPassModal = false
+  let adminPassForm = { password: '', confirm: '' }
+  let adminPassSaving = false
+  let adminPassError = ''
+  let adminPassSuccess = false
+  let adminPassShow = false
+
+  function openAdminPassModal() {
+    adminPassForm = { password: '', confirm: '' }
+    adminPassError = ''; adminPassSuccess = false; adminPassShow = false
+    showAdminPassModal = true
+  }
+
+  async function saveAdminPassword() {
+    if (!adminPassForm.password) { adminPassError = 'New password bharo'; return }
+    if (adminPassForm.password.length < 8) { adminPassError = 'Password kam se kam 8 characters ka hona chahiye'; return }
+    if (adminPassForm.password !== adminPassForm.confirm) { adminPassError = 'Passwords match nahi kar rahe'; return }
+    try {
+      adminPassSaving = true; adminPassError = ''
+      await api.updateEmployee(viewEmployee.id, { password: adminPassForm.password })
+      adminPassSuccess = true
+      setTimeout(() => { showAdminPassModal = false; adminPassSuccess = false }, 1800)
+    } catch (e: any) { adminPassError = e.message }
+    finally { adminPassSaving = false }
+  }
+
+  let editMode = false
+  let editSaving = false
+  let editError = ''
+  let editShowPass = false
+  let editForm = {
+    name: '', email: '', employeeCode: '', department: '',
+    designation: '', phone: '', role: 'employee', joinDate: '', password: '',
+  }
+
+  function enterEdit() {
+    editForm = {
+      name: viewEmployee.name ?? '',
+      email: viewEmployee.email ?? '',
+      employeeCode: viewEmployee.employeeCode ?? '',
+      department: viewEmployee.department ?? '',
+      designation: viewEmployee.designation ?? '',
+      phone: viewEmployee.phone ?? '',
+      role: viewEmployee.role ?? 'employee',
+      joinDate: viewEmployee.joinDate ?? '',
+      password: '',
+    }
+    editError = ''; editShowPass = false; editMode = true
+  }
+
+  async function saveEdit() {
+    if (!editForm.name || !editForm.email || !editForm.employeeCode) {
+      editError = 'Name, email, and employee code are required'; return
+    }
+    try {
+      editSaving = true; editError = ''
+      const payload: any = {
+        name: editForm.name, email: editForm.email, employeeCode: editForm.employeeCode,
+        department: editForm.department || undefined, designation: editForm.designation || undefined,
+        phone: editForm.phone || undefined, role: editForm.role,
+        joinDate: editForm.joinDate || undefined,
+      }
+      if (editForm.password) payload.password = editForm.password
+      const updated = await api.updateEmployee(viewEmployee.id, payload)
+      viewEmployee = { ...viewEmployee, ...updated }
+      employees = employees.map(e => e.id === viewEmployee.id ? { ...e, ...updated } : e)
+      editMode = false
+    } catch (e: any) {
+      editError = e.message
+    } finally { editSaving = false }
+  }
+
+  let showResetModal = false
+  let resetConfirmText = ''
+  let resetting = false
+  let resetError = ''
 
   // Leave balance editor state
   let leaveForm = { sickLeave: 12, casualLeave: 12, earnedLeave: 15, wfhLeave: 24 }
@@ -91,6 +171,19 @@
     await loadEmployees()
   }
 
+  async function resetAllData() {
+    if (resetConfirmText !== 'RESET') return
+    try {
+      resetting = true; resetError = ''
+      await api.resetAllData()
+      showResetModal = false
+      resetConfirmText = ''
+      await loadEmployees()
+    } catch (e: any) {
+      resetError = e.message
+    } finally { resetting = false }
+  }
+
   $: filtered = employees.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
     e.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -104,9 +197,15 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold text-gray-900">Employees</h1>
-    <button on:click={() => showAdd = true} class="btn-primary">
-      <Plus size={16} /> Add Employee
-    </button>
+    <div class="flex gap-2">
+      <button on:click={() => { showResetModal = true; resetConfirmText = ''; resetError = '' }}
+        class="btn-secondary text-red-600 hover:bg-red-50 border-red-200">
+        <Trash2 size={16} /> Reset All Data
+      </button>
+      <button on:click={() => showAdd = true} class="btn-primary">
+        <Plus size={16} /> Add Employee
+      </button>
+    </div>
   </div>
 
   <!-- Search -->
@@ -128,9 +227,13 @@
         <div class="card hover:shadow-md transition-shadow">
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-brand-600 rounded-full flex items-center justify-center text-white font-bold">
-                {emp.name.charAt(0)}
-              </div>
+              {#if emp.avatar}
+                <img src={emp.avatar} alt={emp.name} class="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+              {:else}
+                <div class="w-10 h-10 bg-brand-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                  {emp.name.charAt(0)}
+                </div>
+              {/if}
               <div>
                 <p class="font-semibold text-gray-900">{emp.name}</p>
                 <p class="text-xs text-gray-500">{emp.employeeCode}</p>
@@ -240,6 +343,50 @@
   </div>
 {/if}
 
+<!-- Reset All Data Modal -->
+{#if showResetModal}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="flex items-center justify-between p-6 border-b border-red-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <Trash2 size={18} class="text-red-600" />
+          </div>
+          <h2 class="text-lg font-semibold text-gray-900">Reset All Data</h2>
+        </div>
+        <button on:click={() => showResetModal = false} class="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 space-y-1">
+          <p class="font-semibold">Yeh action permanent hai aur undo nahi ho sakti:</p>
+          <ul class="list-disc pl-4 space-y-0.5 mt-1">
+            <li>Saare employees delete ho jayenge</li>
+            <li>Saara attendance data delete ho jayega</li>
+            <li>Saari leaves aur leave balances delete ho jayengi</li>
+            <li>Sirf aapka admin account bachega</li>
+          </ul>
+        </div>
+        <div>
+          <label for="reset-confirm" class="label">Confirm karne ke liye <span class="font-mono font-bold text-red-600">RESET</span> type karein</label>
+          <input id="reset-confirm" bind:value={resetConfirmText} class="input" placeholder="RESET" autocomplete="off" />
+        </div>
+        {#if resetError}
+          <p class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{resetError}</p>
+        {/if}
+        <div class="flex gap-3 pt-1">
+          <button on:click={() => showResetModal = false} class="btn-secondary flex-1 justify-center">Cancel</button>
+          <button on:click={resetAllData} disabled={resetConfirmText !== 'RESET' || resetting}
+            class="flex-1 justify-center flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+              {resetConfirmText === 'RESET' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-100 text-red-300 cursor-not-allowed'}">
+            <Trash2 size={15} />
+            {resetting ? 'Deleting...' : 'Reset All Data'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <!-- View Employee Modal -->
 {#if viewEmployee}
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -247,32 +394,115 @@
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-100">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-brand-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
-            {viewEmployee.name.charAt(0)}
-          </div>
+          <AvatarUpload
+            employeeId={viewEmployee.id}
+            name={viewEmployee.name}
+            avatar={viewEmployee.avatar}
+            size="md"
+            on:change={e => {
+              viewEmployee = { ...viewEmployee, avatar: e.detail }
+              employees = employees.map(emp => emp.id === viewEmployee.id ? { ...emp, avatar: e.detail } : emp)
+              if ($currentUser?.id === viewEmployee.id) authStore.updateUser({ avatar: e.detail })
+            }}
+          />
           <div>
             <h2 class="text-lg font-semibold text-gray-900">{viewEmployee.name}</h2>
             <p class="text-sm text-gray-500">{viewEmployee.employeeCode} · {viewEmployee.department || 'N/A'}</p>
           </div>
         </div>
-        <button on:click={() => viewEmployee = null} class="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+        <div class="flex items-center gap-2">
+          {#if !editMode}
+            <button on:click={openAdminPassModal}
+              class="btn-secondary text-sm py-1.5 px-3 text-amber-700 hover:bg-amber-50 border-amber-200">
+              <Eye size={14} /> Password
+            </button>
+            <button on:click={enterEdit}
+              class="btn-secondary text-sm py-1.5 px-3">Edit</button>
+          {/if}
+          <button on:click={() => { viewEmployee = null; editMode = false }} class="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+        </div>
       </div>
 
       <div class="p-6 space-y-5">
-        <!-- Info grid -->
-        <div class="grid grid-cols-2 gap-3 text-sm">
-          {#each [
-            { label: 'Email', value: viewEmployee.email },
-            { label: 'Phone', value: viewEmployee.phone || '-' },
-            { label: 'Designation', value: viewEmployee.designation || '-' },
-            { label: 'Join Date', value: formatDate(viewEmployee.joinDate) },
-          ] as info}
-            <div class="bg-gray-50 rounded-lg p-3">
-              <p class="text-xs text-gray-500">{info.label}</p>
-              <p class="font-medium text-gray-900 mt-0.5">{info.value}</p>
+        {#if editMode}
+          <!-- ── Edit Form ── -->
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="label">Full Name *</label>
+                <input bind:value={editForm.name} class="input" placeholder="John Doe" />
+              </div>
+              <div>
+                <label class="label">Employee Code *</label>
+                <input bind:value={editForm.employeeCode} class="input" placeholder="CT-004" />
+              </div>
+              <div>
+                <label class="label">Email *</label>
+                <input type="email" bind:value={editForm.email} class="input" />
+              </div>
+              <div>
+                <label class="label">Phone</label>
+                <input bind:value={editForm.phone} class="input" placeholder="9876543210" />
+              </div>
+              <div>
+                <label class="label">Department</label>
+                <input bind:value={editForm.department} class="input" placeholder="Engineering" />
+              </div>
+              <div>
+                <label class="label">Designation</label>
+                <input bind:value={editForm.designation} class="input" placeholder="Software Engineer" />
+              </div>
+              <div>
+                <label class="label">Role</label>
+                <select bind:value={editForm.role} class="input">
+                  <option value="employee">Employee</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Join Date</label>
+                <input type="date" bind:value={editForm.joinDate} class="input" />
+              </div>
+              <div class="col-span-2">
+                <label class="label">New Password <span class="text-gray-400 font-normal">(khali chhodo agar change nahi karna)</span></label>
+                <div class="relative">
+                  <input type={editShowPass ? 'text' : 'password'} bind:value={editForm.password}
+                    class="input pr-10" placeholder="Min 8 characters" />
+                  <button type="button" on:click={() => editShowPass = !editShowPass}
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <Eye size={15} />
+                  </button>
+                </div>
+              </div>
             </div>
-          {/each}
-        </div>
+            {#if editError}
+              <div class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{editError}</div>
+            {/if}
+            <div class="flex gap-3">
+              <button on:click={() => editMode = false} class="btn-secondary flex-1 justify-center">Cancel</button>
+              <button on:click={saveEdit} disabled={editSaving} class="btn-primary flex-1 justify-center">
+                {editSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        {:else}
+          <!-- ── Info grid (view mode) ── -->
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            {#each [
+              { label: 'Email', value: viewEmployee.email },
+              { label: 'Phone', value: viewEmployee.phone || '-' },
+              { label: 'Designation', value: viewEmployee.designation || '-' },
+              { label: 'Join Date', value: formatDate(viewEmployee.joinDate) },
+              { label: 'Role', value: viewEmployee.role },
+              { label: 'Status', value: viewEmployee.isActive ? 'Active' : 'Inactive' },
+            ] as info}
+              <div class="bg-gray-50 rounded-lg p-3">
+                <p class="text-xs text-gray-500">{info.label}</p>
+                <p class="font-medium text-gray-900 mt-0.5">{info.value}</p>
+              </div>
+            {/each}
+          </div>
+        {/if}
 
         <!-- ── Leave Balance Editor ── -->
         <div class="border border-gray-200 rounded-xl overflow-hidden">
@@ -320,7 +550,8 @@
           </div>
         </div>
 
-        <!-- This month attendance -->
+        <!-- This month attendance (only in view mode) -->
+        {#if !editMode}
         <div>
           <h3 class="text-sm font-semibold text-gray-900 mb-2">This Month Attendance</h3>
           <div class="overflow-x-auto rounded-lg border border-gray-100">
@@ -349,7 +580,60 @@
             </table>
           </div>
         </div>
+        {/if}
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Admin Reset Employee Password Modal -->
+{#if showAdminPassModal && viewEmployee}
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <div>
+          <h2 class="text-base font-semibold text-gray-900">Reset Password</h2>
+          <p class="text-xs text-gray-500 mt-0.5">{viewEmployee.name} ({viewEmployee.employeeCode})</p>
+        </div>
+        <button on:click={() => showAdminPassModal = false} class="p-1.5 hover:bg-gray-100 rounded-lg"><X size={17} /></button>
+      </div>
+
+      {#if adminPassSuccess}
+        <div class="p-8 text-center">
+          <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <p class="font-semibold text-gray-900">Password reset ho gaya!</p>
+        </div>
+      {:else}
+        <div class="p-5 space-y-4">
+          <div>
+            <label class="label" for="ap-new">New Password</label>
+            <div class="relative">
+              <input id="ap-new" type={adminPassShow ? 'text' : 'password'}
+                bind:value={adminPassForm.password} class="input pr-10" placeholder="Min 8 characters" />
+              <button type="button" on:click={() => adminPassShow = !adminPassShow}
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {#if adminPassShow}<EyeOff size={15} />{:else}<Eye size={15} />{/if}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="label" for="ap-confirm">Confirm Password</label>
+            <input id="ap-confirm" type="password"
+              bind:value={adminPassForm.confirm} class="input" placeholder="Repeat new password" />
+          </div>
+          {#if adminPassError}
+            <p class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{adminPassError}</p>
+          {/if}
+          <div class="flex gap-3 pt-1">
+            <button on:click={() => showAdminPassModal = false} class="btn-secondary flex-1 justify-center">Cancel</button>
+            <button on:click={saveAdminPassword} disabled={adminPassSaving} class="btn-primary flex-1 justify-center">
+              {adminPassSaving ? 'Saving...' : 'Reset Password'}
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

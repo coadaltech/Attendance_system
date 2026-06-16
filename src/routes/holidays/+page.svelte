@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { goto } from '$app/navigation'
   import { isAdmin } from '$lib/stores/auth'
   import { api } from '$lib/api'
   import { formatDate } from '$lib/utils'
@@ -15,10 +14,7 @@
 
   let form = { date: '', name: '', description: '', isOptional: false }
 
-  onMount(async () => {
-    if (!$isAdmin) { goto('/dashboard'); return }
-    await loadHolidays()
-  })
+  onMount(async () => { await loadHolidays() })
 
   async function loadHolidays() {
     loading = true
@@ -58,6 +54,9 @@
   $: approved = holidays.filter(h => h.isApproved)
   $: pending = holidays.filter(h => !h.isApproved)
 
+  $: upcoming = holidays.filter(h => new Date(h.date) >= new Date())
+  $: past = holidays.filter(h => new Date(h.date) < new Date())
+
   function monthName(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('en-IN', { month: 'long' })
   }
@@ -69,7 +68,11 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">Holidays</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Only approved holidays are visible to employees</p>
+      <p class="text-sm text-gray-500 mt-0.5">
+        {#if $isAdmin}Only approved holidays are visible to employees
+        {:else}{currentYear} mein {holidays.length} holidays hain
+        {/if}
+      </p>
     </div>
     <div class="flex items-center gap-3">
       <select bind:value={currentYear} on:change={loadHolidays} class="input py-1.5 text-sm w-28">
@@ -77,9 +80,11 @@
           <option value={y}>{y}</option>
         {/each}
       </select>
-      <button on:click={() => showAdd = true} class="btn-primary">
-        <Plus size={16} /> Add Holiday
-      </button>
+      {#if $isAdmin}
+        <button on:click={() => showAdd = true} class="btn-primary">
+          <Plus size={16} /> Add Holiday
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -89,8 +94,10 @@
         <div class="card animate-pulse h-16"></div>
       {/each}
     </div>
-  {:else}
-    <!-- Pending (not yet approved) -->
+
+  {:else if $isAdmin}
+    <!-- ═══════════ ADMIN VIEW ═══════════ -->
+
     {#if pending.length > 0}
       <div class="card overflow-hidden p-0">
         <div class="px-6 py-4 border-b border-amber-100 bg-amber-50 flex items-center gap-2">
@@ -128,7 +135,6 @@
       </div>
     {/if}
 
-    <!-- Approved (visible to employees) -->
     <div class="card overflow-hidden p-0">
       <div class="px-6 py-4 border-b border-green-100 bg-green-50 flex items-center gap-2">
         <CalendarDays size={16} class="text-green-600" />
@@ -168,10 +174,90 @@
         </div>
       {/if}
     </div>
+
+  {:else}
+    <!-- ═══════════ EMPLOYEE VIEW ═══════════ -->
+
+    {#if holidays.length === 0}
+      <div class="card py-16 text-center">
+        <CalendarDays size={36} class="mx-auto text-gray-300 mb-3" />
+        <p class="text-gray-400">{currentYear} ke liye koi holiday approved nahi hai abhi</p>
+      </div>
+    {:else}
+      <!-- Upcoming -->
+      {#if upcoming.length > 0}
+        <div class="card overflow-hidden p-0">
+          <div class="px-6 py-4 border-b border-brand-100 bg-brand-50 flex items-center gap-2">
+            <CalendarDays size={16} class="text-brand-600" />
+            <h2 class="font-semibold text-brand-800">Upcoming Holidays ({upcoming.length})</h2>
+          </div>
+          <div class="divide-y divide-gray-50">
+            {#each upcoming as h}
+              <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-brand-50 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-semibold text-brand-600">{monthName(h.date).slice(0,3).toUpperCase()}</span>
+                    <span class="text-lg font-bold text-brand-700 leading-none">{new Date(h.date).getDate()}</span>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-900">{h.name}</p>
+                    <p class="text-xs text-gray-400">{formatDate(h.date)}</p>
+                    {#if h.description}<p class="text-xs text-gray-500 mt-0.5">{h.description}</p>{/if}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  {#if !h.isApproved}
+                    <span class="badge badge-yellow text-xs">Pending</span>
+                  {:else if h.isOptional}
+                    <span class="badge badge-yellow text-xs">Optional</span>
+                  {:else}
+                    <span class="badge badge-green text-xs">Approved</span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+      <!-- Past -->
+      {#if past.length > 0}
+        <div class="card overflow-hidden p-0">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+            <CalendarDays size={16} class="text-gray-400" />
+            <h2 class="font-semibold text-gray-500">Past Holidays ({past.length})</h2>
+          </div>
+          <div class="divide-y divide-gray-50">
+            {#each past as h}
+              <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors opacity-60">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-gray-100 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-semibold text-gray-500">{monthName(h.date).slice(0,3).toUpperCase()}</span>
+                    <span class="text-lg font-bold text-gray-600 leading-none">{new Date(h.date).getDate()}</span>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-700">{h.name}</p>
+                    <p class="text-xs text-gray-400">{formatDate(h.date)}</p>
+                    {#if h.description}<p class="text-xs text-gray-400 mt-0.5">{h.description}</p>{/if}
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  {#if !h.isApproved}
+                    <span class="badge badge-yellow text-xs opacity-70">Pending</span>
+                  {:else if h.isOptional}
+                    <span class="badge text-xs bg-gray-100 text-gray-500">Optional</span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    {/if}
   {/if}
 </div>
 
-<!-- Add Holiday Modal -->
+<!-- Add Holiday Modal (admin only) -->
 {#if showAdd}
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
