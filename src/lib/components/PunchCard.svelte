@@ -35,7 +35,6 @@
     return diff.toFixed(2)
   })()
 
-  // Haversine on the client too — for live distance display
   function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const R = 6371000
     const toRad = (d: number) => d * Math.PI / 180
@@ -90,7 +89,6 @@
 
   async function punchIn() {
     error = ''
-    // Step 1: Get location
     locating = true
     let coords: { lat: number; lng: number }
     try {
@@ -113,7 +111,6 @@
       locating = false
     }
 
-    // Step 2: Send to backend (backend also validates distance)
     try {
       loading = true
       const record = await api.punchIn(coords.lat, coords.lng)
@@ -139,11 +136,11 @@
 
   $: locationBg = {
     idle: '',
-    locating: 'bg-blue-50 text-blue-700',
-    ok: 'bg-emerald-50 text-emerald-700',
-    far: 'bg-red-50 text-red-700',
-    denied: 'bg-amber-50 text-amber-700',
-    unavailable: 'bg-amber-50 text-amber-700',
+    locating:    'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    ok:          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    far:         'bg-red-500/10 text-red-600 dark:text-red-400',
+    denied:      'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    unavailable: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   }[locationStatus]
 
   $: locationIcon = { idle: MapPin, locating: Loader2, ok: CheckCircle2, far: XCircle, denied: AlertTriangle, unavailable: AlertTriangle }[locationStatus]
@@ -151,8 +148,8 @@
 
 <div class="card">
   <div class="flex items-center justify-between mb-4">
-    <h2 class="font-semibold text-gray-900">Today's Attendance</h2>
-    <span class="text-sm text-gray-500">
+    <h2 class="font-semibold text-gray-900 dark:text-gray-100">Today's Attendance</h2>
+    <span class="text-sm text-gray-500 dark:text-gray-400">
       {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
     </span>
   </div>
@@ -160,10 +157,10 @@
   <!-- Live clock -->
   <div class="flex items-center justify-center py-5">
     <div class="text-center">
-      <div class="text-5xl font-bold text-gray-900 tabular-nums tracking-tight">
+      <div class="text-5xl font-bold text-gray-900 dark:text-gray-100 tabular-nums tracking-tight">
         {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
       </div>
-      <div class="text-sm text-gray-500 mt-1">
+      <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
         {now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
       </div>
     </div>
@@ -171,21 +168,21 @@
 
   <!-- Punch times -->
   <div class="grid grid-cols-2 gap-3 mb-4">
-    <div class="bg-emerald-50 rounded-xl p-3">
-      <div class="flex items-center gap-2 text-emerald-700 mb-1">
+    <div class="bg-emerald-500/10 rounded-xl p-3">
+      <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
         <LogIn size={14} />
         <span class="text-xs font-medium">Punch In</span>
       </div>
-      <div class="text-lg font-semibold text-emerald-900">
+      <div class="text-lg font-semibold text-emerald-700 dark:text-emerald-300">
         {isPunchedIn ? formatTime(todayRecord.punchIn) : '--:--'}
       </div>
     </div>
-    <div class="bg-red-50 rounded-xl p-3">
-      <div class="flex items-center gap-2 text-red-700 mb-1">
+    <div class="bg-red-500/10 rounded-xl p-3">
+      <div class="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
         <LogOut size={14} />
         <span class="text-xs font-medium">Punch Out</span>
       </div>
-      <div class="text-lg font-semibold text-red-900">
+      <div class="text-lg font-semibold text-red-700 dark:text-red-300">
         {isPunchedOut ? formatTime(todayRecord.punchOut) : '--:--'}
       </div>
     </div>
@@ -193,18 +190,18 @@
 
   <!-- Working hours -->
   {#if isPunchedIn}
-    <div class="bg-brand-50 rounded-xl p-3 mb-4 flex items-center gap-3">
-      <div class="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center">
-        <Timer size={16} class="text-brand-700" />
+    <div class="bg-brand-500/10 rounded-xl p-3 mb-4 flex items-center gap-3">
+      <div class="w-8 h-8 bg-brand-500/20 rounded-lg flex items-center justify-center">
+        <Timer size={16} class="text-brand-600 dark:text-brand-400" />
       </div>
       <div>
-        <div class="text-xs text-brand-600 font-medium">
+        <div class="text-xs text-brand-600 dark:text-brand-400 font-medium">
           {isPunchedOut ? 'Total Working Hours' : 'Working Since'}
         </div>
-        <div class="text-lg font-semibold text-brand-900">
+        <div class="text-lg font-semibold text-brand-700 dark:text-brand-300">
           {isPunchedOut ? formatHours(todayRecord.workingHours) : formatHours(liveHours)}
           {#if !isPunchedOut}
-            <span class="text-xs text-brand-500 font-normal animate-pulse"> (live)</span>
+            <span class="text-xs text-brand-600 dark:text-brand-400 font-normal animate-pulse"> (live)</span>
           {/if}
         </div>
       </div>
@@ -255,7 +252,7 @@
   {/if}
 
   {#if error && locationStatus === 'idle'}
-    <div class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mb-3 flex items-start gap-2">
+    <div class="text-sm text-red-600 dark:text-red-400 bg-red-500/10 px-3 py-2 rounded-lg mb-3 flex items-start gap-2">
       <AlertTriangle size={14} class="mt-0.5 flex-shrink-0" />
       {error}
     </div>
@@ -278,7 +275,7 @@
       {/if}
     </button>
     {#if officeConfig && locationStatus === 'idle'}
-      <p class="text-xs text-center text-gray-400 mt-2 flex items-center justify-center gap-1">
+      <p class="text-xs text-center text-gray-400 dark:text-gray-500 mt-2 flex items-center justify-center gap-1">
         <MapPin size={11} />
         Location will be verified against {officeConfig.name}
       </p>
@@ -295,7 +292,7 @@
       {/if}
     </button>
   {:else}
-    <div class="text-center py-3 text-sm text-gray-500 bg-gray-50 rounded-xl">
+    <div class="text-center py-3 text-sm text-gray-500 dark:text-gray-400 bg-[var(--color-faint)] rounded-xl">
       Attendance marked for today ✓
     </div>
   {/if}

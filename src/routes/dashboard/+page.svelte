@@ -92,8 +92,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-bold text-gray-900">Good {greeting}, {$user?.name?.split(' ')[0]}!</h1>
-    <p class="text-gray-500 text-sm mt-0.5">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Good {greeting}, {$user?.name?.split(' ')[0]}!</h1>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
   </div>
 
   {#if loading}
@@ -119,23 +119,23 @@
 
     <!-- Today's employee attendance table -->
     <div class="card overflow-hidden p-0">
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h2 class="font-semibold text-gray-900">Today's Attendance</h2>
-        <span class="text-sm text-gray-400">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+      <div class="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900 dark:text-gray-100">Today's Attendance</h2>
+        <span class="text-sm text-gray-400 dark:text-gray-500">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-[var(--color-faint)]">
             <tr>
               {#each ['Employee', 'Department', 'Punch In', 'Punch Out', 'Hours', 'Status'] as h}
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{h}</th>
               {/each}
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
+          <tbody class="divide-y divide-[var(--color-divide)]">
             {#each todayAll as emp}
               {@const att = emp.todayAttendance}
-              <tr class="hover:bg-gray-50 transition-colors">
+              <tr class="hover:bg-[var(--color-faint)] transition-colors">
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
                     {#if emp.avatar}
@@ -146,19 +146,19 @@
                       </div>
                     {/if}
                     <div>
-                      <p class="text-sm font-medium text-gray-900">{emp.name}</p>
-                      <p class="text-xs text-gray-400">{emp.employeeCode}</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</p>
+                      <p class="text-xs text-gray-400 dark:text-gray-500">{emp.employeeCode}</p>
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{emp.department || '-'}</td>
-                <td class="px-4 py-3 text-sm text-gray-700 font-medium">
-                  {#if att?.punchIn}{formatTime(att.punchIn)}{:else}<span class="text-gray-300">--:--</span>{/if}
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{emp.department || '-'}</td>
+                <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 font-medium">
+                  {#if att?.punchIn}{formatTime(att.punchIn)}{:else}<span class="text-gray-300 dark:text-white/20">--:--</span>{/if}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-700">
-                  {#if att?.punchOut}{formatTime(att.punchOut)}{:else}<span class="text-gray-300">--:--</span>{/if}
+                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                  {#if att?.punchOut}{formatTime(att.punchOut)}{:else}<span class="text-gray-300 dark:text-white/20">--:--</span>{/if}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   {att?.workingHours ? `${Number(att.workingHours).toFixed(1)}h` : '-'}
                 </td>
                 <td class="px-4 py-3">
@@ -173,7 +173,7 @@
               </tr>
             {:else}
               <tr>
-                <td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">No employees found</td>
+                <td colspan="6" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No employees found</td>
               </tr>
             {/each}
           </tbody>
@@ -185,56 +185,56 @@
     <div class="grid lg:grid-cols-2 gap-6">
       <!-- Pending Leave Requests -->
       <div class="card overflow-hidden p-0">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 class="font-semibold text-gray-900">Pending Leave Requests</h2>
+        <div class="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Pending Leave Requests</h2>
           {#if pendingLeaves > 0}
             <span class="badge badge-yellow">{pendingLeaves} pending</span>
           {/if}
         </div>
-        <div class="divide-y divide-gray-50">
+        <div class="divide-y divide-[var(--color-divide)]">
           {#each allLeaves.filter(l => l.status === 'pending').slice(0, 6) as leave}
             {@const typeBadge = getLeaveTypeBadge(leave.leaveType)}
             <div class="px-5 py-3 flex items-center gap-3">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 truncate">{leave.employee?.name}</p>
-                <p class="text-xs text-gray-400">
+                <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{leave.employee?.name}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500">
                   <span class="{typeBadge.class} mr-1.5">{typeBadge.label}</span>
                   {formatDate(leave.startDate)} → {formatDate(leave.endDate)} · {leave.totalDays}d
                 </p>
               </div>
               <div class="flex items-center gap-1 flex-shrink-0">
                 <button on:click={() => approveLeave(leave.id)}
-                  class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Approve">
+                  class="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 rounded-lg transition-colors" title="Approve">
                   <Check size={14} />
                 </button>
                 <button on:click={() => { rejectModal = { id: leave.id, show: true } }}
-                  class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Reject">
+                  class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-500/15 rounded-lg transition-colors" title="Reject">
                   <XCircle size={14} />
                 </button>
               </div>
             </div>
           {:else}
-            <p class="px-6 py-8 text-center text-sm text-gray-400">No pending requests</p>
+            <p class="px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No pending requests</p>
           {/each}
         </div>
       </div>
 
       <!-- Upcoming Holidays -->
       <div class="card overflow-hidden p-0">
-        <div class="px-6 py-4 border-b border-gray-100">
-          <h2 class="font-semibold text-gray-900">Upcoming Holidays</h2>
+        <div class="px-6 py-4 border-b border-[var(--color-border)]">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Upcoming Holidays</h2>
         </div>
-        <div class="divide-y divide-gray-50">
+        <div class="divide-y divide-[var(--color-divide)]">
           {#each holidays.filter(h => new Date(h.date) >= new Date()).slice(0, 6) as h}
             <div class="px-5 py-3 flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-900">{h.name}</p>
-                <p class="text-xs text-gray-400">{formatDate(h.date)}</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{h.name}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500">{formatDate(h.date)}</p>
               </div>
               <span class="badge badge-blue">Holiday</span>
             </div>
           {:else}
-            <p class="px-6 py-8 text-center text-sm text-gray-400">No upcoming holidays</p>
+            <p class="px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No upcoming holidays</p>
           {/each}
         </div>
       </div>
@@ -262,9 +262,9 @@
 
 <!-- Reject Leave Modal -->
 {#if rejectModal.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-      <h3 class="font-semibold text-gray-900 mb-3">Reject Leave Request</h3>
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-modal border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Reject Leave Request</h3>
       <label for="dash-reject-reason" class="label">Reason for rejection</label>
       <textarea id="dash-reject-reason" bind:value={rejectReason} class="input resize-none" rows="3" placeholder="Enter reason..."></textarea>
       <div class="flex gap-3 mt-4">

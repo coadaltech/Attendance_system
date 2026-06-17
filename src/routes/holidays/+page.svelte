@@ -52,7 +52,7 @@
   }
 
   $: approved = holidays.filter(h => h.isApproved)
-  $: pending = holidays.filter(h => !h.isApproved)
+  $: pending = holidays.filter(h => !h.isApproved && new Date(h.date) >= new Date(new Date().toDateString()))
 
   $: upcoming = holidays.filter(h => new Date(h.date) >= new Date())
   $: past = holidays.filter(h => new Date(h.date) < new Date())
@@ -67,8 +67,8 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Holidays</h1>
-      <p class="text-sm text-gray-500 mt-0.5">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Holidays</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
         {#if $isAdmin}Only approved holidays are visible to employees
         {:else}{currentYear} mein {holidays.length} holidays hain
         {/if}
@@ -100,32 +100,32 @@
 
     {#if pending.length > 0}
       <div class="card overflow-hidden p-0">
-        <div class="px-6 py-4 border-b border-amber-100 bg-amber-50 flex items-center gap-2">
-          <EyeOff size={16} class="text-amber-600" />
-          <h2 class="font-semibold text-amber-800">Pending Approval ({pending.length})</h2>
-          <span class="text-xs text-amber-600 ml-1">— not visible to employees yet</span>
+        <div class="px-6 py-4 border-b border-amber-500/20 bg-amber-500/10 flex items-center gap-2">
+          <EyeOff size={16} class="text-amber-600 dark:text-amber-400" />
+          <h2 class="font-semibold text-amber-700 dark:text-amber-300">Pending Approval ({pending.length})</h2>
+          <span class="text-xs text-amber-600 dark:text-amber-400 ml-1">— not visible to employees yet</span>
         </div>
-        <div class="divide-y divide-gray-50">
+        <div class="divide-y divide-[var(--color-divide)]">
           {#each pending as h}
-            <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-faint)] transition-colors">
               <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-amber-100 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-                  <span class="text-xs font-semibold text-amber-700">{monthName(h.date).slice(0,3).toUpperCase()}</span>
-                  <span class="text-lg font-bold text-amber-800 leading-none">{new Date(h.date).getDate()}</span>
+                <div class="w-12 h-12 bg-amber-500/15 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                  <span class="text-xs font-semibold text-amber-600 dark:text-amber-400">{monthName(h.date).slice(0,3).toUpperCase()}</span>
+                  <span class="text-lg font-bold text-amber-700 dark:text-amber-300 leading-none">{new Date(h.date).getDate()}</span>
                 </div>
                 <div>
-                  <p class="font-medium text-gray-900">{h.name}</p>
-                  <p class="text-xs text-gray-400">{formatDate(h.date)}{h.isOptional ? ' · Optional' : ''}</p>
-                  {#if h.description}<p class="text-xs text-gray-500 mt-0.5">{h.description}</p>{/if}
+                  <p class="font-medium text-gray-900 dark:text-gray-100">{h.name}</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">{formatDate(h.date)}{h.isOptional ? ' · Optional' : ''}</p>
+                  {#if h.description}<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{h.description}</p>{/if}
                 </div>
               </div>
               <div class="flex items-center gap-2 flex-shrink-0">
                 <button on:click={() => approve(h.id)}
-                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors">
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500/25 rounded-lg transition-colors">
                   <Check size={13} /> Approve
                 </button>
                 <button on:click={() => remove(h.id)}
-                  class="p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+                  class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-500/15 rounded-lg transition-colors">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -136,36 +136,36 @@
     {/if}
 
     <div class="card overflow-hidden p-0">
-      <div class="px-6 py-4 border-b border-green-100 bg-green-50 flex items-center gap-2">
-        <CalendarDays size={16} class="text-green-600" />
-        <h2 class="font-semibold text-green-800">Approved Holidays ({approved.length})</h2>
-        <span class="text-xs text-green-600 ml-1">— visible to all employees</span>
+      <div class="px-6 py-4 border-b border-emerald-500/20 bg-emerald-500/10 flex items-center gap-2">
+        <CalendarDays size={16} class="text-emerald-600 dark:text-emerald-400" />
+        <h2 class="font-semibold text-emerald-700 dark:text-emerald-300">Approved Holidays ({approved.length})</h2>
+        <span class="text-xs text-emerald-600 dark:text-emerald-400 ml-1">— visible to all employees</span>
       </div>
       {#if approved.length === 0}
-        <p class="px-6 py-10 text-center text-sm text-gray-400">No approved holidays for {currentYear}</p>
+        <p class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">No approved holidays for {currentYear}</p>
       {:else}
-        <div class="divide-y divide-gray-50">
+        <div class="divide-y divide-[var(--color-divide)]">
           {#each approved as h}
-            <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-faint)] transition-colors">
               <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-                  <span class="text-xs font-semibold text-emerald-600">{monthName(h.date).slice(0,3).toUpperCase()}</span>
-                  <span class="text-lg font-bold text-emerald-700 leading-none">{new Date(h.date).getDate()}</span>
+                <div class="w-12 h-12 bg-emerald-500/15 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                  <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{monthName(h.date).slice(0,3).toUpperCase()}</span>
+                  <span class="text-lg font-bold text-emerald-700 dark:text-emerald-300 leading-none">{new Date(h.date).getDate()}</span>
                 </div>
                 <div>
-                  <p class="font-medium text-gray-900">{h.name}</p>
-                  <p class="text-xs text-gray-400">{formatDate(h.date)}{h.isOptional ? ' · Optional' : ''}</p>
-                  {#if h.description}<p class="text-xs text-gray-500 mt-0.5">{h.description}</p>{/if}
+                  <p class="font-medium text-gray-900 dark:text-gray-100">{h.name}</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">{formatDate(h.date)}{h.isOptional ? ' · Optional' : ''}</p>
+                  {#if h.description}<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{h.description}</p>{/if}
                 </div>
               </div>
               <div class="flex items-center gap-2 flex-shrink-0">
                 <span class="badge badge-green text-xs">Approved</span>
                 <button on:click={() => revoke(h.id)}
-                  class="p-1.5 text-amber-400 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-colors" title="Revoke approval">
+                  class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15 rounded-lg transition-colors" title="Revoke approval">
                   <EyeOff size={14} />
                 </button>
                 <button on:click={() => remove(h.id)}
-                  class="p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+                  class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-500/15 rounded-lg transition-colors">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -180,29 +180,29 @@
 
     {#if holidays.length === 0}
       <div class="card py-16 text-center">
-        <CalendarDays size={36} class="mx-auto text-gray-300 mb-3" />
-        <p class="text-gray-400">{currentYear} ke liye koi holiday approved nahi hai abhi</p>
+        <CalendarDays size={36} class="mx-auto text-gray-400 dark:text-gray-600 mb-3" />
+        <p class="text-gray-400 dark:text-gray-500">{currentYear} ke liye koi holiday approved nahi hai abhi</p>
       </div>
     {:else}
       <!-- Upcoming -->
       {#if upcoming.length > 0}
         <div class="card overflow-hidden p-0">
-          <div class="px-6 py-4 border-b border-brand-100 bg-brand-50 flex items-center gap-2">
-            <CalendarDays size={16} class="text-brand-600" />
-            <h2 class="font-semibold text-brand-800">Upcoming Holidays ({upcoming.length})</h2>
+          <div class="px-6 py-4 border-b border-brand-500/20 bg-brand-500/10 flex items-center gap-2">
+            <CalendarDays size={16} class="text-brand-600 dark:text-brand-400" />
+            <h2 class="font-semibold text-brand-700 dark:text-brand-300">Upcoming Holidays ({upcoming.length})</h2>
           </div>
-          <div class="divide-y divide-gray-50">
+          <div class="divide-y divide-[var(--color-divide)]">
             {#each upcoming as h}
-              <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+              <div class="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-faint)] transition-colors">
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 bg-brand-50 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-semibold text-brand-600">{monthName(h.date).slice(0,3).toUpperCase()}</span>
-                    <span class="text-lg font-bold text-brand-700 leading-none">{new Date(h.date).getDate()}</span>
+                  <div class="w-12 h-12 bg-brand-500/15 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-semibold text-brand-600 dark:text-brand-400">{monthName(h.date).slice(0,3).toUpperCase()}</span>
+                    <span class="text-lg font-bold text-brand-700 dark:text-brand-300 leading-none">{new Date(h.date).getDate()}</span>
                   </div>
                   <div>
-                    <p class="font-medium text-gray-900">{h.name}</p>
-                    <p class="text-xs text-gray-400">{formatDate(h.date)}</p>
-                    {#if h.description}<p class="text-xs text-gray-500 mt-0.5">{h.description}</p>{/if}
+                    <p class="font-medium text-gray-900 dark:text-gray-100">{h.name}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">{formatDate(h.date)}</p>
+                    {#if h.description}<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{h.description}</p>{/if}
                   </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
@@ -223,29 +223,29 @@
       <!-- Past -->
       {#if past.length > 0}
         <div class="card overflow-hidden p-0">
-          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-            <CalendarDays size={16} class="text-gray-400" />
-            <h2 class="font-semibold text-gray-500">Past Holidays ({past.length})</h2>
+          <div class="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-faint)] flex items-center gap-2">
+            <CalendarDays size={16} class="text-gray-400 dark:text-gray-500" />
+            <h2 class="font-semibold text-gray-500 dark:text-gray-400">Past Holidays ({past.length})</h2>
           </div>
-          <div class="divide-y divide-gray-50">
+          <div class="divide-y divide-[var(--color-divide)]">
             {#each past as h}
-              <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors opacity-60">
+              <div class="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-faint)] transition-colors opacity-50">
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 bg-gray-100 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-semibold text-gray-500">{monthName(h.date).slice(0,3).toUpperCase()}</span>
-                    <span class="text-lg font-bold text-gray-600 leading-none">{new Date(h.date).getDate()}</span>
+                  <div class="w-12 h-12 bg-[var(--color-subtle)] rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">{monthName(h.date).slice(0,3).toUpperCase()}</span>
+                    <span class="text-lg font-bold text-gray-500 dark:text-gray-400 leading-none">{new Date(h.date).getDate()}</span>
                   </div>
                   <div>
-                    <p class="font-medium text-gray-700">{h.name}</p>
-                    <p class="text-xs text-gray-400">{formatDate(h.date)}</p>
-                    {#if h.description}<p class="text-xs text-gray-400 mt-0.5">{h.description}</p>{/if}
+                    <p class="font-medium text-gray-600 dark:text-gray-300">{h.name}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">{formatDate(h.date)}</p>
+                    {#if h.description}<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{h.description}</p>{/if}
                   </div>
                 </div>
                 <div class="flex items-center gap-1.5">
                   {#if !h.isApproved}
                     <span class="badge badge-yellow text-xs opacity-70">Pending</span>
                   {:else if h.isOptional}
-                    <span class="badge text-xs bg-gray-100 text-gray-500">Optional</span>
+                    <span class="badge badge-gray text-xs">Optional</span>
                   {/if}
                 </div>
               </div>
@@ -259,11 +259,11 @@
 
 <!-- Add Holiday Modal (admin only) -->
 {#if showAdd}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-      <div class="flex items-center justify-between p-6 border-b border-gray-100">
-        <h2 class="text-lg font-semibold text-gray-900">Add Holiday</h2>
-        <button on:click={() => { showAdd = false; formError = '' }} class="p-2 hover:bg-gray-100 rounded-lg">
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-modal border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Holiday</h2>
+        <button on:click={() => { showAdd = false; formError = '' }} class="p-2 hover:bg-[var(--color-subtle)] rounded-lg text-gray-500 dark:text-gray-400">
           <X size={18} />
         </button>
       </div>
@@ -282,13 +282,13 @@
         </div>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" bind:checked={form.isOptional} class="w-4 h-4 rounded accent-brand-600" />
-          <span class="text-sm text-gray-700">Optional holiday</span>
+          <span class="text-sm text-gray-700 dark:text-gray-300">Optional holiday</span>
         </label>
-        <p class="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+        <p class="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg">
           Holiday will be saved as <strong>pending</strong> — approve it to make it visible to employees.
         </p>
         {#if formError}
-          <p class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</p>
+          <p class="text-xs text-red-600 dark:text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{formError}</p>
         {/if}
         <div class="flex gap-3 pt-1">
           <button type="button" on:click={() => { showAdd = false; formError = '' }} class="btn-secondary flex-1 justify-center">Cancel</button>

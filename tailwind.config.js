@@ -1,9 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./src/**/*.{html,js,svelte,ts}'],
   theme: {
     extend: {
       colors: {
+        page:    'var(--color-page)',
+        card:    'var(--color-card)',
+        modal:   'var(--color-modal)',
+        surface: 'var(--color-surface)',
         brand: {
           50: '#eff6ff',
           100: '#dbeafe',

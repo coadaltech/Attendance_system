@@ -71,7 +71,7 @@
 
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-gray-900">Leave Management</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Leave Management</h1>
     <button on:click={() => showApplyForm = true} class="btn-primary">
       <Plus size={16} /> Apply for Leave
     </button>
@@ -92,14 +92,14 @@
           {@const remaining = lb.total - lb.used}
           {@const pct = Math.round((lb.used / lb.total) * 100)}
           <div class="card">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{lb.label}</span>
-              <span class="text-lg font-bold text-gray-900">{remaining}<span class="text-xs text-gray-400 font-normal">/{lb.total}</span></span>
+            <div class="mb-2">
+              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">{lb.label}</p>
+              <p class="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{remaining}<span class="text-xs text-gray-400 dark:text-gray-500 font-normal ml-0.5">/{lb.total}</span></p>
             </div>
-            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+            <div class="w-full bg-[var(--color-subtle)] rounded-full h-1.5 mb-1">
               <div class="h-1.5 rounded-full bg-{lb.color}-500 transition-all" style="width:{pct}%"></div>
             </div>
-            <p class="text-xs text-gray-400">{lb.used} used · {remaining} left</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500">{lb.used} used · {remaining} left</p>
           </div>
         {/each}
       </div>
@@ -107,15 +107,15 @@
 
     <!-- Tabs (admin) -->
     {#if $isAdmin}
-      <div class="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+      <div class="flex gap-1 bg-[var(--color-subtle)] p-1 rounded-lg w-fit">
         <button on:click={() => activeTab = 'my'}
           class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors
-            {activeTab === 'my' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}">
+            {activeTab === 'my' ? 'bg-[var(--color-card)] shadow text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}">
           My Leaves
         </button>
         <button on:click={() => activeTab = 'all'}
           class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors
-            {activeTab === 'all' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}">
+            {activeTab === 'all' ? 'bg-[var(--color-card)] shadow text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}">
           All Leaves
           {#if allLeaves.filter(l => l.status === 'pending').length > 0}
             <span class="ml-1.5 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
@@ -129,52 +129,52 @@
     <!-- Leaves table -->
     {@const displayLeaves = $isAdmin && activeTab === 'all' ? allLeaves : myLeaves}
     <div class="card overflow-hidden p-0">
-      <div class="px-6 py-4 border-b border-gray-100">
-        <h2 class="font-semibold text-gray-900">{$isAdmin && activeTab === 'all' ? 'All Employee Leaves' : 'My Leave Requests'}</h2>
+      <div class="px-6 py-4 border-b border-[var(--color-border)]">
+        <h2 class="font-semibold text-gray-900 dark:text-gray-100">{$isAdmin && activeTab === 'all' ? 'All Employee Leaves' : 'My Leave Requests'}</h2>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-[var(--color-faint)]">
             <tr>
               {#if $isAdmin && activeTab === 'all'}
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Employee</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase">Employee</th>
               {/if}
               {#each ['Type', 'From', 'To', 'Days', 'Reason', 'Status', 'Actions'] as h}
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase">{h}</th>
               {/each}
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
+          <tbody class="divide-y divide-[var(--color-divide)]">
             {#each displayLeaves as leave}
               {@const statusBadge = getLeaveStatusBadge(leave.status)}
               {@const typeBadge = getLeaveTypeBadge(leave.leaveType)}
-              <tr class="hover:bg-gray-50 transition-colors">
+              <tr class="hover:bg-[var(--color-faint)] transition-colors">
                 {#if $isAdmin && activeTab === 'all'}
                   <td class="px-4 py-3">
-                    <p class="text-sm font-medium text-gray-900">{leave.employee?.name}</p>
-                    <p class="text-xs text-gray-400">{leave.employee?.department}</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{leave.employee?.name}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">{leave.employee?.department}</p>
                   </td>
                 {/if}
                 <td class="px-4 py-3"><span class="{typeBadge.class}">{typeBadge.label}</span></td>
-                <td class="px-4 py-3 text-sm text-gray-600">{formatDate(leave.startDate)}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">{formatDate(leave.endDate)}</td>
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">{leave.totalDays}d</td>
-                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{leave.reason}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDate(leave.startDate)}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDate(leave.endDate)}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{leave.totalDays}d</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{leave.reason}</td>
                 <td class="px-4 py-3"><span class="{statusBadge.class}">{statusBadge.label}</span></td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-1">
                     {#if $isAdmin && activeTab === 'all' && leave.status === 'pending'}
                       <button on:click={() => approveLeave(leave.id)}
-                        class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Approve">
+                        class="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 rounded-lg transition-colors" title="Approve">
                         <Check size={14} />
                       </button>
                       <button on:click={() => { rejectModal = { id: leave.id, show: true } }}
-                        class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Reject">
+                        class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-500/15 rounded-lg transition-colors" title="Reject">
                         <XCircle size={14} />
                       </button>
                     {:else if leave.status === 'pending' && activeTab !== 'all'}
                       <button on:click={() => cancelLeave(leave.id)}
-                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Cancel">
+                        class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-500/15 rounded-lg transition-colors" title="Cancel">
                         <X size={14} />
                       </button>
                     {/if}
@@ -183,7 +183,7 @@
               </tr>
             {:else}
               <tr>
-                <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-sm">No leave records found</td>
+                <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">No leave records found</td>
               </tr>
             {/each}
           </tbody>
@@ -195,11 +195,11 @@
 
 <!-- Apply Leave Modal -->
 {#if showApplyForm}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-      <div class="flex items-center justify-between p-6 border-b border-gray-100">
-        <h2 class="text-lg font-semibold text-gray-900">Apply for Leave</h2>
-        <button on:click={() => { showApplyForm = false; formError = '' }} class="p-2 hover:bg-gray-100 rounded-lg">
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-modal border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Apply for Leave</h2>
+        <button on:click={() => { showApplyForm = false; formError = '' }} class="p-2 hover:bg-[var(--color-subtle)] rounded-lg text-gray-500 dark:text-gray-400">
           <X size={18} />
         </button>
       </div>
@@ -213,7 +213,7 @@
             <option value="wfh">Work From Home</option>
           </select>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid sm:grid-cols-2 gap-3">
           <div>
             <label for="leave-start" class="label">From Date</label>
             <input id="leave-start" type="date" bind:value={form.startDate} class="input" min={new Date().toISOString().split('T')[0]} required />
@@ -228,7 +228,7 @@
           <textarea id="leave-reason" bind:value={form.reason} class="input resize-none" rows="3" placeholder="Brief reason for leave..." required></textarea>
         </div>
         {#if formError}
-          <div class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</div>
+          <div class="text-sm text-red-600 dark:text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{formError}</div>
         {/if}
         <div class="flex gap-3 pt-2">
           <button type="button" on:click={() => showApplyForm = false} class="btn-secondary flex-1 justify-center">Cancel</button>
@@ -243,9 +243,9 @@
 
 <!-- Reject Modal -->
 {#if rejectModal.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-      <h3 class="font-semibold text-gray-900 mb-3">Reject Leave Request</h3>
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-modal border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Reject Leave Request</h3>
       <label for="reject-reason" class="label">Reason for rejection</label>
       <textarea id="reject-reason" bind:value={rejectReason} class="input resize-none" rows="3" placeholder="Enter reason..."></textarea>
       <div class="flex gap-3 mt-4">
