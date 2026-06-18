@@ -28,23 +28,50 @@
   $: firstDay    = getFirstDayOfMonth(currentYear, currentMonth)
   $: todayStr    = new Date().toISOString().split('T')[0]
 
-  // Attendance stats from records
-  $: presentDays  = attendanceHistory.filter(r => r.status === 'full_day' || r.status === 'overtime').length
-  $: halfDays     = attendanceHistory.filter(r => r.status === 'half_day').length
-  $: absentDays   = attendanceHistory.filter(r => r.status === 'absent').length
+  // Attendance stats — infer absent for past working days with no record
+  $: presentDays = attendanceHistory.filter(r => r.status === 'full_day' || r.status === 'overtime').length
+  $: halfDays    = attendanceHistory.filter(r => r.status === 'half_day').length
+
   $: totalWorking = (() => {
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
     let count = 0
     for (let d = 1; d <= daysInMonth; d++) {
+      const dayDate = new Date(currentYear, currentMonth - 1, d)
+      if (dayDate > todayMidnight) break
+      const dow = dayDate.getDay()
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-      if (new Date(dateStr) > new Date()) break
-      const dow = new Date(currentYear, currentMonth - 1, d).getDay()
       if (dow !== 0 && dow !== 6 && !holidayMap[dateStr]) count++
     }
     return count
   })()
+
+  // Absent = past working days that have no present/half-day/overtime record
+  $: absentDays = totalWorking - presentDays - halfDays
+
   $: attendancePct = totalWorking > 0
     ? Math.round(((presentDays + halfDays * 0.5) / totalWorking) * 100)
     : 0
+
+  // Build display records: actual records + inferred absent rows for past working days
+  $: displayRecords = (() => {
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+    const rows: any[] = []
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayDate = new Date(currentYear, currentMonth - 1, d)
+      if (dayDate > todayMidnight) break
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+      const dow = dayDate.getDay()
+      if (dow === 0 || dow === 6 || holidayMap[dateStr]) continue
+      const record = attendanceHistory.find(r => r.date === dateStr)
+      if (record) {
+        rows.push(record)
+      } else if (dayDate < todayMidnight) {
+        // Past working day, no record → inferred absent
+        rows.push({ date: dateStr, punchIn: null, punchOut: null, workingHours: null, status: 'absent' })
+      }
+    }
+    return rows.reverse()
+  })()
 
   async function loadAttendance() {
     loadingAtt = true
@@ -81,9 +108,14 @@
   function getDayStatus(day: number): string {
     const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`
     if (holidayMap[dateStr]) return 'holiday'
-    const dow = new Date(currentYear, currentMonth - 1, day).getDay()
+    const dayDate = new Date(currentYear, currentMonth - 1, day)
+    const dow = dayDate.getDay()
     if (dow === 0 || dow === 6) return 'weekend'
-    return attendanceMap[dateStr] || 'none'
+    if (attendanceMap[dateStr]) return attendanceMap[dateStr]
+    // Past working day with no record = absent
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+    if (dayDate < todayMidnight) return 'absent'
+    return 'none'
   }
 
   function getDayClass(status: string): string {
@@ -251,14 +283,16 @@
           </div>
         {/if}
 
-        <!-- Recent records list -->
-        {#if attendanceHistory.length > 0}
+        <!-- Daily records (includes inferred absent rows) -->
+        {#if loadingAtt}
+          <div class="h-20 animate-pulse rounded-xl bg-[var(--color-faint)]"></div>
+        {:else if displayRecords.length > 0}
           <div class="border border-[var(--color-border)] rounded-xl overflow-hidden">
             <div class="bg-[var(--color-faint)] px-4 py-2.5 border-b border-[var(--color-border)]">
               <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Daily Records</p>
             </div>
-            <div class="divide-y divide-[var(--color-divide)] max-h-48 overflow-y-auto">
-              {#each [...attendanceHistory].reverse() as record}
+            <div class="divide-y divide-[var(--color-divide)] max-h-52 overflow-y-auto">
+              {#each displayRecords as record}
                 {@const badge = (() => {
                   const m: Record<string, {cls: string, label: string}> = {
                     full_day: { cls: 'badge-green',  label: 'Present' },
@@ -269,20 +303,20 @@
                   return m[record.status] ?? { cls: 'badge-gray', label: record.status }
                 })()}
                 <div class="flex items-center px-4 py-2.5 text-sm">
-                  <span class="text-gray-700 dark:text-gray-300 font-medium w-32 flex-shrink-0">
+                  <span class="text-gray-700 dark:text-gray-300 font-medium w-28 flex-shrink-0">
                     {new Date(record.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                   </span>
-                  <span class="text-gray-500 dark:text-gray-400 w-24 flex-shrink-0">{formatTime(record.punchIn)}</span>
-                  <span class="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{formatTime(record.punchOut)}</span>
-                  <span class="text-gray-400 dark:text-gray-500 flex-1">{record.workingHours ? formatHours(record.workingHours) : '-'}</span>
-                  <span class="badge {badge.cls}">{badge.label}</span>
+                  <span class="text-gray-500 dark:text-gray-400 w-22 flex-shrink-0 hidden sm:block">{formatTime(record.punchIn)}</span>
+                  <span class="text-gray-400 dark:text-gray-500 w-22 flex-shrink-0 hidden sm:block">{formatTime(record.punchOut)}</span>
+                  <span class="text-gray-400 dark:text-gray-500 flex-1 hidden sm:block">{record.workingHours ? formatHours(record.workingHours) : '-'}</span>
+                  <span class="badge {badge.cls} ml-auto">{badge.label}</span>
                 </div>
               {/each}
             </div>
           </div>
-        {:else if !loadingAtt}
+        {:else}
           <p class="text-sm text-center text-gray-400 dark:text-gray-500 py-6">
-            No attendance records for {MONTHS[currentMonth - 1]} {currentYear}
+            No records for {MONTHS[currentMonth - 1]} {currentYear}
           </p>
         {/if}
 
