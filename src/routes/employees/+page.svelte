@@ -17,6 +17,40 @@
   let viewEmployee: any = null
   let empAttendance: any[] = []
   let empLeaveBalance: any = null
+
+  // Merge actual records + inferred absent rows for past working days since employee.createdAt
+  $: displayAttendance = (() => {
+    const now = new Date()
+    const todayMidnight = new Date(now); todayMidnight.setHours(0, 0, 0, 0)
+    const year = now.getFullYear(), month = now.getMonth() + 1
+    const lastDay = new Date(year, month, 0).getDate()
+
+    const trackingStart = (() => {
+      const monthStart = new Date(year, month - 1, 1)
+      if (viewEmployee?.createdAt) {
+        const d = new Date(viewEmployee.createdAt); d.setHours(0, 0, 0, 0)
+        return d > monthStart ? d : monthStart
+      }
+      return monthStart
+    })()
+
+    const attMap: Record<string, any> = Object.fromEntries(empAttendance.map(r => [r.date, r]))
+    const rows: any[] = []
+    for (let d = 1; d <= lastDay; d++) {
+      const dayDate = new Date(year, month - 1, d)
+      if (dayDate < trackingStart) continue
+      if (dayDate > todayMidnight) break
+      if (dayDate.getDay() === 0) continue // Sunday only
+      const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+      const record = attMap[dateStr]
+      if (record) {
+        rows.push(record)
+      } else if (dayDate < todayMidnight) {
+        rows.push({ date: dateStr, punchIn: null, punchOut: null, workingHours: null, status: 'absent' })
+      }
+    }
+    return rows.reverse()
+  })()
   let search = ''
   let formError = ''
   let submitting = false
@@ -560,7 +594,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-[var(--color-divide)]">
-                {#each empAttendance.slice(0, 8) as rec}
+                {#each displayAttendance.slice(0, 8) as rec}
                   {@const badge = getStatusBadge(rec.status)}
                   <tr>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{new Date(rec.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
