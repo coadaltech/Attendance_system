@@ -161,12 +161,14 @@
     <div class="md:hidden border-t border-white/10">
       <!-- User info -->
       <div class="px-4 py-3 border-b border-white/10 flex items-center gap-3">
-        {#if $user?.avatar}
-          <img src={$user.avatar} alt={$user.name} class="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-        {:else}
-          <div class="w-9 h-9 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-            {$user?.name?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
+        {#if $user}
+          <AvatarUpload
+            employeeId={$user.id}
+            name={$user.name}
+            avatar={$user.avatar}
+            size="md"
+            on:change={e => authStore.updateUser({ avatar: e.detail })}
+          />
         {/if}
         <div class="min-w-0">
           <p class="text-sm font-semibold text-white truncate">{$user?.name}</p>
