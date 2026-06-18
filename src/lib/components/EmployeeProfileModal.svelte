@@ -28,7 +28,17 @@
   $: firstDay    = getFirstDayOfMonth(currentYear, currentMonth)
   $: todayStr    = new Date().toISOString().split('T')[0]
 
-  // Attendance stats — infer absent for past working days with no record
+  // Tracking start = when this employee was added to the system (createdAt), clamped to month start
+  $: trackingStart = (() => {
+    const monthStart = new Date(currentYear, currentMonth - 1, 1)
+    if (employee.createdAt) {
+      const d = new Date(employee.createdAt); d.setHours(0, 0, 0, 0)
+      return d > monthStart ? d : monthStart
+    }
+    return monthStart
+  })()
+
+  // Attendance stats — only count days from trackingStart onwards
   $: presentDays = attendanceHistory.filter(r => r.status === 'full_day' || r.status === 'overtime').length
   $: halfDays    = attendanceHistory.filter(r => r.status === 'half_day').length
 
@@ -37,7 +47,7 @@
     let count = 0
     for (let d = 1; d <= daysInMonth; d++) {
       const dayDate = new Date(currentYear, currentMonth - 1, d)
-      if (dayDate > todayMidnight) break
+      if (dayDate < trackingStart || dayDate > todayMidnight) continue
       const dow = dayDate.getDay()
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
       if (dow !== 0 && !holidayMap[dateStr]) count++
@@ -45,19 +55,20 @@
     return count
   })()
 
-  // Absent = past working days that have no present/half-day/overtime record
+  // Absent = working days since tracking started with no present/half-day record
   $: absentDays = totalWorking - presentDays - halfDays
 
   $: attendancePct = totalWorking > 0
     ? Math.round(((presentDays + halfDays * 0.5) / totalWorking) * 100)
     : 0
 
-  // Build display records: actual records + inferred absent rows for past working days
+  // Build display records: actual records + inferred absent rows (from trackingStart only)
   $: displayRecords = (() => {
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
     const rows: any[] = []
     for (let d = 1; d <= daysInMonth; d++) {
       const dayDate = new Date(currentYear, currentMonth - 1, d)
+      if (dayDate < trackingStart) continue
       if (dayDate > todayMidnight) break
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
       const dow = dayDate.getDay()
@@ -66,7 +77,6 @@
       if (record) {
         rows.push(record)
       } else if (dayDate < todayMidnight) {
-        // Past working day, no record → inferred absent
         rows.push({ date: dateStr, punchIn: null, punchOut: null, workingHours: null, status: 'absent' })
       }
     }
@@ -112,9 +122,9 @@
     const dow = dayDate.getDay()
     if (dow === 0) return 'weekend'
     if (attendanceMap[dateStr]) return attendanceMap[dateStr]
-    // Past working day with no record = absent
+    // Only mark absent for days on/after the tracking start date
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
-    if (dayDate < todayMidnight) return 'absent'
+    if (dayDate >= trackingStart && dayDate < todayMidnight) return 'absent'
     return 'none'
   }
 
