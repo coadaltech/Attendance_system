@@ -40,7 +40,7 @@
       if (dayDate > todayMidnight) break
       const dow = dayDate.getDay()
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-      if (dow !== 0 && dow !== 6 && !holidayMap[dateStr]) count++
+      if (dow !== 0 && !holidayMap[dateStr]) count++
     }
     return count
   })()
@@ -61,7 +61,7 @@
       if (dayDate > todayMidnight) break
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
       const dow = dayDate.getDay()
-      if (dow === 0 || dow === 6 || holidayMap[dateStr]) continue
+      if (dow === 0 || holidayMap[dateStr]) continue
       const record = attendanceHistory.find(r => r.date === dateStr)
       if (record) {
         rows.push(record)
@@ -110,7 +110,7 @@
     if (holidayMap[dateStr]) return 'holiday'
     const dayDate = new Date(currentYear, currentMonth - 1, day)
     const dow = dayDate.getDay()
-    if (dow === 0 || dow === 6) return 'weekend'
+    if (dow === 0) return 'weekend'
     if (attendanceMap[dateStr]) return attendanceMap[dateStr]
     // Past working day with no record = absent
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)

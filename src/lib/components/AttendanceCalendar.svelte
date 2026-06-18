@@ -27,7 +27,7 @@
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`
     if (holidayMap[dateStr]) return 'holiday'
     const dow = new Date(year, month - 1, day).getDay()
-    if (dow === 0 || dow === 6) return 'weekend'
+    if (dow === 0) return 'weekend'
     return attendanceMap[dateStr] || 'none'
   }
 
