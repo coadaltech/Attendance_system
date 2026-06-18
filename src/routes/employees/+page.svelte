@@ -18,7 +18,18 @@
   let empAttendance: any[] = []
   let empLeaveBalance: any = null
 
-  // Merge actual records + inferred absent rows for past working days since employee.createdAt
+  // Platform start = earliest createdAt among non-admin employees
+  // (admin may have been created earlier for system setup)
+  $: platformStart = (() => {
+    const nonAdmins = employees.filter(e => e.role !== 'admin' && e.createdAt)
+    if (nonAdmins.length === 0) return null
+    return nonAdmins.reduce((earliest: Date, e: any) => {
+      const d = new Date(e.createdAt); d.setHours(0, 0, 0, 0)
+      return d < earliest ? d : earliest
+    }, new Date(nonAdmins[0].createdAt))
+  })()
+
+  // Merge actual records + inferred absent rows for past working days since tracking start
   $: displayAttendance = (() => {
     const now = new Date()
     const todayMidnight = new Date(now); todayMidnight.setHours(0, 0, 0, 0)
@@ -27,11 +38,16 @@
 
     const trackingStart = (() => {
       const monthStart = new Date(year, month - 1, 1)
+      // Use the later of: platform start or this employee's own createdAt
+      const candidates: Date[] = []
+      if (platformStart) candidates.push(platformStart)
       if (viewEmployee?.createdAt) {
         const d = new Date(viewEmployee.createdAt); d.setHours(0, 0, 0, 0)
-        return d > monthStart ? d : monthStart
+        candidates.push(d)
       }
-      return monthStart
+      if (candidates.length === 0) return monthStart
+      const best = candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
+      return best > monthStart ? best : monthStart
     })()
 
     const attMap: Record<string, any> = Object.fromEntries(empAttendance.map(r => [r.date, r]))
@@ -419,7 +435,7 @@
 
 <!-- View Employee Modal -->
 {#if viewEmployee}
-  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+  <div class="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-modal border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-2xl my-4">
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-[var(--color-border)]">

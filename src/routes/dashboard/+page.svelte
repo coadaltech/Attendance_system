@@ -33,6 +33,13 @@
   $: presentToday = todayAll.filter(e => e.todayAttendance?.punchIn).length
   $: absentToday = todayAll.filter(e => !e.todayAttendance?.punchIn).length
   $: pendingLeaves = allLeaves.filter(l => l.status === 'pending').length
+  // Platform start = earliest createdAt among non-admin employees
+  $: platformStart = todayAll.length > 0
+    ? todayAll.reduce((earliest: Date, e: any) => {
+        const d = new Date(e.createdAt); d.setHours(0, 0, 0, 0)
+        return d < earliest ? d : earliest
+      }, new Date(todayAll[0].createdAt))
+    : null
 
   $: leaveRemaining = leaveBalance
     ? (leaveBalance.sickLeave - leaveBalance.sickUsed) +
@@ -270,6 +277,7 @@
     employee={selectedEmployee}
     {allLeaves}
     {holidays}
+    {platformStart}
     onClose={() => selectedEmployee = null}
   />
 {/if}

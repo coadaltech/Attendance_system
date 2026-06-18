@@ -7,6 +7,7 @@
   export let employee: any
   export let allLeaves: any[] = []
   export let holidays: any[] = []
+  export let platformStart: Date | null = null
   export let onClose: () => void = () => {}
 
   let activeTab: 'attendance' | 'leaves' = 'attendance'
@@ -28,14 +29,15 @@
   $: firstDay    = getFirstDayOfMonth(currentYear, currentMonth)
   $: todayStr    = new Date().toISOString().split('T')[0]
 
-  // Tracking start = when this employee was added to the system (createdAt), clamped to month start
+  // Tracking start = later of (platformStart, employee.createdAt), clamped to month start
   $: trackingStart = (() => {
     const monthStart = new Date(currentYear, currentMonth - 1, 1)
-    if (employee.createdAt) {
-      const d = new Date(employee.createdAt); d.setHours(0, 0, 0, 0)
-      return d > monthStart ? d : monthStart
-    }
-    return monthStart
+    const candidates: Date[] = []
+    if (platformStart) { const d = new Date(platformStart); d.setHours(0,0,0,0); candidates.push(d) }
+    if (employee.createdAt) { const d = new Date(employee.createdAt); d.setHours(0,0,0,0); candidates.push(d) }
+    if (candidates.length === 0) return monthStart
+    const best = candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
+    return best > monthStart ? best : monthStart
   })()
 
   // Attendance stats — only count days from trackingStart onwards
