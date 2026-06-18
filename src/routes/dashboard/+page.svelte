@@ -4,8 +4,11 @@
   import { api } from '$lib/api'
   import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte'
   import StatsCard from '$lib/components/StatsCard.svelte'
+  import EmployeeProfileModal from '$lib/components/EmployeeProfileModal.svelte'
   import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X } from 'lucide-svelte'
   import { formatDate, formatTime, getLeaveTypeBadge } from '$lib/utils'
+
+  let selectedEmployee: any = null
 
   // shared
   let holidays: any[] = []
@@ -135,7 +138,8 @@
           <tbody class="divide-y divide-[var(--color-divide)]">
             {#each todayAll as emp}
               {@const att = emp.todayAttendance}
-              <tr class="hover:bg-[var(--color-faint)] transition-colors">
+              <tr class="hover:bg-[var(--color-faint)] transition-colors cursor-pointer"
+                on:click={() => selectedEmployee = emp}>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
                     {#if emp.avatar}
@@ -146,7 +150,7 @@
                       </div>
                     {/if}
                     <div>
-                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</p>
+                      <p class="text-sm font-medium text-brand-600 dark:text-brand-400 hover:underline">{emp.name}</p>
                       <p class="text-xs text-gray-400 dark:text-gray-500">{emp.employeeCode}</p>
                     </div>
                   </div>
@@ -259,6 +263,16 @@
       onMonthChange={onMonthChange} />
   {/if}
 </div>
+
+<!-- Employee Profile Modal -->
+{#if selectedEmployee}
+  <EmployeeProfileModal
+    employee={selectedEmployee}
+    {allLeaves}
+    {holidays}
+    onClose={() => selectedEmployee = null}
+  />
+{/if}
 
 <!-- Reject Leave Modal -->
 {#if rejectModal.show}
