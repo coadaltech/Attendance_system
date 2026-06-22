@@ -21,7 +21,12 @@
 
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-  $: attendanceMap = Object.fromEntries(attendanceHistory.map(r => [r.date, r.status]))
+  function effectiveStatus(r: any): string {
+    if (r.punchIn && !r.punchOut) return 'in_office'
+    return r.status
+  }
+
+  $: attendanceMap = Object.fromEntries(attendanceHistory.map(r => [r.date, effectiveStatus(r)]))
   $: holidayMap    = Object.fromEntries(holidays.map(h => [h.date, h.name]))
   $: empLeaves     = allLeaves.filter(l => l.employee?.id === employee?.id || l.employeeId === employee?.id)
 
@@ -41,7 +46,9 @@
   })()
 
   // Attendance stats — only count days from trackingStart onwards
-  $: presentDays = attendanceHistory.filter(r => r.status === 'full_day' || r.status === 'overtime').length
+  $: presentDays = attendanceHistory.filter(r =>
+    r.status === 'full_day' || r.status === 'overtime' || (r.punchIn && !r.punchOut)
+  ).length
   $: halfDays    = attendanceHistory.filter(r => r.status === 'half_day').length
 
   $: totalWorking = (() => {
@@ -132,13 +139,14 @@
 
   function getDayClass(status: string): string {
     const map: Record<string, string> = {
-      full_day: 'bg-emerald-500 text-white',
-      overtime: 'bg-purple-500 text-white',
-      half_day: 'bg-amber-400 text-white',
-      absent:   'bg-red-400 text-white',
-      holiday:  'bg-blue-500 text-white',
-      weekend:  'bg-[var(--color-subtle)] text-gray-400 dark:text-gray-500',
-      none:     'bg-[var(--color-faint)] text-gray-500 dark:text-gray-400',
+      full_day:  'bg-emerald-500 text-white',
+      in_office: 'bg-emerald-400 text-white',
+      overtime:  'bg-purple-500 text-white',
+      half_day:  'bg-amber-400 text-white',
+      absent:    'bg-red-400 text-white',
+      holiday:   'bg-blue-500 text-white',
+      weekend:   'bg-[var(--color-subtle)] text-gray-400 dark:text-gray-500',
+      none:      'bg-[var(--color-faint)] text-gray-500 dark:text-gray-400',
     }
     return map[status] || map.none
   }
@@ -306,6 +314,8 @@
             <div class="divide-y divide-[var(--color-divide)] max-h-52 overflow-y-auto">
               {#each displayRecords as record}
                 {@const badge = (() => {
+                  if (record.punchIn && !record.punchOut)
+                    return { cls: 'badge-green', label: 'In Office' }
                   const m: Record<string, {cls: string, label: string}> = {
                     full_day: { cls: 'badge-green',  label: 'Present' },
                     overtime: { cls: 'badge-purple', label: 'Overtime' },

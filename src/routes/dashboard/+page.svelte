@@ -5,10 +5,12 @@
   import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte'
   import StatsCard from '$lib/components/StatsCard.svelte'
   import EmployeeProfileModal from '$lib/components/EmployeeProfileModal.svelte'
-  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X } from 'lucide-svelte'
+  import AdminMarkAttendanceModal from '$lib/components/AdminMarkAttendanceModal.svelte'
+  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X, PenLine } from 'lucide-svelte'
   import { formatDate, formatTime, getLeaveTypeBadge } from '$lib/utils'
 
   let selectedEmployee: any = null
+  let markAttModal: { show: boolean; employee: any } = { show: false, employee: null }
 
   // shared
   let holidays: any[] = []
@@ -131,13 +133,19 @@
     <div class="card overflow-hidden p-0">
       <div class="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
         <h2 class="font-semibold text-gray-900 dark:text-gray-100">Today's Attendance</h2>
-        <span class="text-sm text-gray-400 dark:text-gray-500">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-gray-400 dark:text-gray-500">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <button on:click={() => markAttModal = { show: true, employee: null }}
+            class="btn-primary py-1.5 px-3 text-sm flex items-center gap-1.5">
+            <PenLine size={14} /> Mark Attendance
+          </button>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-[var(--color-faint)]">
             <tr>
-              {#each ['Employee', 'Department', 'Punch In', 'Punch Out', 'Hours', 'Status'] as h}
+              {#each ['Employee', 'Department', 'Punch In', 'Punch Out', 'Hours', 'Status', ''] as h}
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{h}</th>
               {/each}
             </tr>
@@ -181,10 +189,18 @@
                     <span class="badge badge-red">Absent</span>
                   {/if}
                 </td>
+                <td class="px-4 py-3">
+                  <button
+                    on:click|stopPropagation={() => markAttModal = { show: true, employee: emp }}
+                    class="p-1.5 text-brand-600 dark:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-colors"
+                    title="Attendance mark karo">
+                    <PenLine size={14} />
+                  </button>
+                </td>
               </tr>
             {:else}
               <tr>
-                <td colspan="6" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No employees found</td>
+                <td colspan="7" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No employees found</td>
               </tr>
             {/each}
           </tbody>
@@ -270,6 +286,16 @@
       onMonthChange={onMonthChange} />
   {/if}
 </div>
+
+<!-- Admin Mark Attendance Modal -->
+{#if markAttModal.show}
+  <AdminMarkAttendanceModal
+    employees={todayAll}
+    preselectedEmployee={markAttModal.employee}
+    onClose={() => markAttModal = { show: false, employee: null }}
+    onSaved={loadAdmin}
+  />
+{/if}
 
 <!-- Employee Profile Modal -->
 {#if selectedEmployee}
