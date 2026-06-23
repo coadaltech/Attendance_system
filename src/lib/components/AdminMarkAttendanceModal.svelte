@@ -9,10 +9,18 @@
 
   let employeeId: number = preselectedEmployee?.id ?? (employees[0]?.id ?? 0)
   let date: string = new Date().toISOString().split('T')[0]
-  let punchIn  = ''
-  let punchOut = ''
-  let status   = ''
-  let notes    = ''
+
+  function toTimeStr(ts: string | null | undefined) {
+    if (!ts) return ''
+    const d = new Date(ts)
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  }
+
+  const existing = preselectedEmployee?.todayAttendance
+  let punchIn  = toTimeStr(existing?.punchIn)
+  let punchOut = toTimeStr(existing?.punchOut)
+  let status   = existing?.status ?? ''
+  let notes    = existing?.notes  ?? ''
   let loading  = false
   let error    = ''
 
