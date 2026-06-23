@@ -9,6 +9,9 @@
   export let holidays: any[] = []
   export let platformStart: Date | null = null
   export let onClose: () => void = () => {}
+  export let refreshTrigger = 0
+
+  $: if (refreshTrigger > 0) loadAttendance()
 
   let activeTab: 'attendance' | 'leaves' = 'attendance'
   let currentMonth = new Date().getMonth() + 1

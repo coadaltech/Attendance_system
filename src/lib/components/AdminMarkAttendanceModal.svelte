@@ -19,8 +19,8 @@
   const existing = preselectedEmployee?.todayAttendance
   let punchIn  = toTimeStr(existing?.punchIn)
   let punchOut = toTimeStr(existing?.punchOut)
-  let status   = existing?.status ?? ''
-  let notes    = existing?.notes  ?? ''
+  let status   = ''  // Always Auto — backend recalculates from punch times
+  let notes    = existing?.notes ?? ''
   let loading  = false
   let error    = ''
 

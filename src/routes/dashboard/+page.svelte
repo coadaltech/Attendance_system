@@ -86,6 +86,8 @@
       (leaveBalance.earnedLeave - leaveBalance.earnedUsed)
     : 0
 
+  let profileRefreshTrigger = 0
+
   async function loadAdmin() {
     const [emps, hols, leaves] = await Promise.all([
       api.getTodayAll(),
@@ -95,6 +97,11 @@
     todayAll = emps
     holidays = hols
     allLeaves = leaves
+  }
+
+  async function onAdminSaved() {
+    await loadAdmin()
+    profileRefreshTrigger++
   }
 
   async function loadEmployee(year: number, month: number) {
@@ -334,7 +341,7 @@
     employees={todayAll}
     preselectedEmployee={markAttModal.employee}
     onClose={() => markAttModal = { show: false, employee: null }}
-    onSaved={loadAdmin}
+    onSaved={onAdminSaved}
   />
 {/if}
 
@@ -345,6 +352,7 @@
     {allLeaves}
     {holidays}
     {platformStart}
+    refreshTrigger={profileRefreshTrigger}
     onClose={() => selectedEmployee = null}
   />
 {/if}
