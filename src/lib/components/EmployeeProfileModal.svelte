@@ -46,10 +46,14 @@
   })()
 
   // Attendance stats — only count days from trackingStart onwards
-  $: presentDays = attendanceHistory.filter(r =>
-    r.status === 'full_day' || r.status === 'overtime' || (r.punchIn && !r.punchOut)
-  ).length
-  $: halfDays    = attendanceHistory.filter(r => r.status === 'half_day').length
+  $: presentDays = attendanceHistory.filter(r => {
+    const d = new Date(r.date + 'T00:00:00')
+    return d >= trackingStart && (r.status === 'full_day' || r.status === 'overtime' || (r.punchIn && !r.punchOut))
+  }).length
+  $: halfDays = attendanceHistory.filter(r => {
+    const d = new Date(r.date + 'T00:00:00')
+    return d >= trackingStart && r.status === 'half_day'
+  }).length
 
   $: totalWorking = (() => {
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
