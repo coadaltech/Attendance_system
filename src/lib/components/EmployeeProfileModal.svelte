@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { X, ChevronLeft, ChevronRight, Calendar, Umbrella, Clock, TrendingUp, UserCheck, UserX } from 'lucide-svelte'
+  import { X, ChevronLeft, ChevronRight, Calendar, Umbrella, Clock, TrendingUp, UserCheck, UserX, Download } from 'lucide-svelte'
   import { api } from '$lib/api'
-  import { formatDate, formatTime, formatHours, MONTHS, getDaysInMonth, getFirstDayOfMonth, getLeaveTypeBadge, getLeaveStatusBadge } from '$lib/utils'
+  import { formatDate, formatTime, formatHours, MONTHS, getDaysInMonth, getFirstDayOfMonth, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV } from '$lib/utils'
 
   export let employee: any
   export let allLeaves: any[] = []
@@ -124,6 +124,18 @@
     loadAttendance()
   }
 
+  function exportEmployeeCSV() {
+    const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+    const rows = displayRecords.map(r => {
+      const dayName = new Date(r.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })
+      const statusLabel = r.punchIn && !r.punchOut ? 'In Office'
+        : ({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent' }[r.status] ?? r.status)
+      return [formatDate(r.date), dayName, formatTime(r.punchIn), formatTime(r.punchOut),
+        r.workingHours ? formatHours(r.workingHours) : '-', statusLabel]
+    })
+    downloadCSV(`${employee.name}_${MONTHS[currentMonth - 1]}_${currentYear}.csv`, [header, ...rows])
+  }
+
   function getDayStatus(day: number): string {
     const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`
     if (holidayMap[dateStr]) return 'holiday'
@@ -234,10 +246,16 @@
           <h3 class="font-semibold text-gray-900 dark:text-gray-100 text-base">
             {MONTHS[currentMonth - 1]} {currentYear}
           </h3>
-          <button on:click={nextMonth}
-            class="p-1.5 rounded-lg hover:bg-[var(--color-subtle)] text-gray-600 dark:text-gray-300 transition-colors">
-            <ChevronRight size={18} />
-          </button>
+          <div class="flex items-center gap-1">
+            <button on:click={exportEmployeeCSV} title="Export CSV"
+              class="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1 text-xs font-medium px-2">
+              <Download size={14} /> CSV
+            </button>
+            <button on:click={nextMonth}
+              class="p-1.5 rounded-lg hover:bg-[var(--color-subtle)] text-gray-600 dark:text-gray-300 transition-colors">
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
 
         <!-- Stats row -->

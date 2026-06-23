@@ -6,11 +6,48 @@
   import StatsCard from '$lib/components/StatsCard.svelte'
   import EmployeeProfileModal from '$lib/components/EmployeeProfileModal.svelte'
   import AdminMarkAttendanceModal from '$lib/components/AdminMarkAttendanceModal.svelte'
-  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X, PenLine } from 'lucide-svelte'
-  import { formatDate, formatTime, getLeaveTypeBadge } from '$lib/utils'
+  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X, PenLine, Download } from 'lucide-svelte'
+  import { formatDate, formatTime, getLeaveTypeBadge, downloadCSV, MONTHS } from '$lib/utils'
 
   let selectedEmployee: any = null
   let markAttModal: { show: boolean; employee: any } = { show: false, employee: null }
+  let exportLoading = false
+
+  async function exportAllCSV() {
+    try {
+      exportLoading = true
+      const data = await api.getExportAll(currentMonth, currentYear)
+      const recMap: Record<string, Record<number, any>> = {}
+      for (const r of data.records) {
+        if (!recMap[r.date]) recMap[r.date] = {}
+        recMap[r.date][r.employeeId] = r
+      }
+      const lastDay  = new Date(data.year, data.month, 0).getDate()
+      const header   = ['Employee', 'Code', 'Department', 'Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+      const rows: string[][] = []
+      for (const emp of data.employees) {
+        for (let d = 1; d <= lastDay; d++) {
+          const dateStr = `${data.year}-${String(data.month).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+          const dayDate = new Date(dateStr + 'T00:00:00')
+          if (dayDate > new Date()) break
+          if (dayDate.getDay() === 0) continue
+          const r = recMap[dateStr]?.[emp.id]
+          const dayName = dayDate.toLocaleDateString('en-IN', { weekday: 'long' })
+          const statusLabel = !r ? 'Absent'
+            : r.punchIn && !r.punchOut ? 'In Office'
+            : ({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent' }[r?.status] ?? r?.status)
+          const hrs = r?.workingHours ? `${Math.floor(Number(r.workingHours))}h ${Math.round((Number(r.workingHours) % 1) * 60)}m` : '-'
+          rows.push([emp.name, emp.employeeCode, emp.department ?? '-', dateStr, dayName,
+            r?.punchIn  ? new Date(r.punchIn).toLocaleTimeString('en-IN',  { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
+            r?.punchOut ? new Date(r.punchOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
+            hrs, statusLabel])
+        }
+      }
+      downloadCSV(`Attendance_${MONTHS[data.month - 1]}_${data.year}.csv`, [header, ...rows])
+    } finally {
+      exportLoading = false
+    }
+  }
 
   // shared
   let holidays: any[] = []
@@ -135,6 +172,10 @@
         <h2 class="font-semibold text-gray-900 dark:text-gray-100">Today's Attendance</h2>
         <div class="flex items-center gap-3">
           <span class="text-sm text-gray-400 dark:text-gray-500">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <button on:click={exportAllCSV} disabled={exportLoading}
+            class="btn-secondary py-1.5 px-3 text-sm flex items-center gap-1.5">
+            <Download size={14} /> {exportLoading ? 'Downloading...' : 'Export CSV'}
+          </button>
           <button on:click={() => markAttModal = { show: true, employee: null }}
             class="btn-primary py-1.5 px-3 text-sm flex items-center gap-1.5">
             <PenLine size={14} /> Mark Attendance
