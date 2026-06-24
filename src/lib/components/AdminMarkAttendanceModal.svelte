@@ -26,6 +26,14 @@
 
   $: if (preselectedEmployee) employeeId = preselectedEmployee.id
 
+  // Convert local HH:MM + date string to UTC ISO — avoids server timezone issues
+  function toISO(timeStr: string): string | undefined {
+    if (!timeStr) return undefined
+    const [h, m] = timeStr.split(':').map(Number)
+    const [y, mo, d] = date.split('-').map(Number)
+    return new Date(y, mo - 1, d, h, m, 0, 0).toISOString()
+  }
+
   async function save() {
     if (!employeeId || !date) { error = 'Employee aur date zaroori hai'; return }
     if (punchIn && punchOut && punchOut <= punchIn) {
@@ -36,10 +44,10 @@
       await api.adminMarkAttendance({
         employeeId,
         date,
-        punchIn:  punchIn  || undefined,
-        punchOut: punchOut || undefined,
-        status:   status   || undefined,
-        notes:    notes    || undefined,
+        punchIn:  toISO(punchIn),
+        punchOut: toISO(punchOut),
+        status:   status || undefined,
+        notes:    notes  || undefined,
       })
       onSaved()
       onClose()
