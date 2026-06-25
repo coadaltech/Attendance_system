@@ -48,34 +48,41 @@
     return best > monthStart ? best : monthStart
   })()
 
-  // Attendance stats — only count days from trackingStart onwards
-  $: presentDays = attendanceHistory.filter(r => {
-    const d = new Date(r.date + 'T00:00:00')
-    return d >= trackingStart && (r.status === 'full_day' || r.status === 'overtime' || (r.punchIn && !r.punchOut))
-  }).length
-  $: halfDays = attendanceHistory.filter(r => {
-    const d = new Date(r.date + 'T00:00:00')
-    return d >= trackingStart && r.status === 'half_day'
-  }).length
+  // statsStart = platformStart clamped to month start — same for ALL employees this month
+  // employee.createdAt is irrelevant for stats; only platform launch date matters
+  $: statsStart = (() => {
+    const monthStart = new Date(currentYear, currentMonth - 1, 1)
+    if (!platformStart) return monthStart
+    const ps = new Date(platformStart); ps.setHours(0, 0, 0, 0)
+    return ps > monthStart ? ps : monthStart
+  })()
 
   $: totalWorking = (() => {
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
     let count = 0
     for (let d = 1; d <= daysInMonth; d++) {
       const dayDate = new Date(currentYear, currentMonth - 1, d)
-      if (dayDate < trackingStart || dayDate > todayMidnight) continue
-      const dow = dayDate.getDay()
+      if (dayDate < statsStart || dayDate > todayMidnight) continue
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-      if (dow !== 0 && !holidayMap[dateStr]) count++
+      if (dayDate.getDay() !== 0 && !holidayMap[dateStr]) count++
     }
     return count
   })()
 
-  // Absent = working days since tracking started with no present/half-day record
-  $: absentDays = totalWorking - presentDays - halfDays
+  $: presentDays = (() => {
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+    return attendanceHistory.filter(r => {
+      const d = new Date(r.date + 'T00:00:00')
+      if (d < statsStart || d > todayMidnight) return false
+      if (d.getDay() === 0 || holidayMap[r.date]) return false
+      return r.status === 'full_day' || r.status === 'half_day' || r.status === 'overtime' || (r.punchIn && !r.punchOut)
+    }).length
+  })()
+
+  $: absentDays = Math.max(0, totalWorking - presentDays)
 
   $: attendancePct = totalWorking > 0
-    ? Math.round(((presentDays + halfDays * 0.5) / totalWorking) * 100)
+    ? Math.min(100, Math.round((presentDays / totalWorking) * 100))
     : 0
 
   // Build display records: actual records + inferred absent rows (from trackingStart only)
