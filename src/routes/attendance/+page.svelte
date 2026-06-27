@@ -17,7 +17,7 @@
   let loading = true
 
   $: attendanceMap = Object.fromEntries(history.map(r => [r.date, r.status]))
-  $: holidayMap = Object.fromEntries(holidays.map(h => [h.date, h.name]))
+  $: holidayMap = Object.fromEntries(holidays.filter(h => h.isApproved).map(h => [h.date, h.name]))
 
   async function load(year: number, month: number) {
     loading = true

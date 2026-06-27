@@ -67,7 +67,8 @@
   let rejectReason = ''
 
   $: attendanceMap = Object.fromEntries(attendanceHistory.map(r => [r.date, r.status]))
-  $: holidayMap = Object.fromEntries(holidays.map(h => [h.date, h.name]))
+  $: approvedHolidays = holidays.filter(h => h.isApproved)
+  $: holidayMap = Object.fromEntries(approvedHolidays.map(h => [h.date, h.name]))
 
   $: presentToday = todayAll.filter(e => e.todayAttendance?.punchIn).length
   $: absentToday = todayAll.filter(e => !e.todayAttendance?.punchIn).length
@@ -300,7 +301,7 @@
           <h2 class="font-semibold text-gray-900 dark:text-gray-100">Upcoming Holidays</h2>
         </div>
         <div class="divide-y divide-[var(--color-divide)]">
-          {#each holidays.filter(h => new Date(h.date) >= new Date()).slice(0, 6) as h}
+          {#each approvedHolidays.filter(h => new Date(h.date) >= new Date()).slice(0, 6) as h}
             <div class="px-5 py-3 flex items-center justify-between">
               <div>
                 <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{h.name}</p>
@@ -350,7 +351,7 @@
   <EmployeeProfileModal
     employee={selectedEmployee}
     {allLeaves}
-    {holidays}
+    holidays={approvedHolidays}
     {platformStart}
     refreshTrigger={profileRefreshTrigger}
     onClose={() => selectedEmployee = null}
