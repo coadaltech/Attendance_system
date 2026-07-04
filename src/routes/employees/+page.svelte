@@ -3,9 +3,10 @@
   import { goto } from '$app/navigation'
   import { isAdmin } from '$lib/stores/auth'
   import { api } from '$lib/api'
-  import { formatDate, formatTime, formatHours, getStatusBadge } from '$lib/utils'
-  import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search, Trash2 } from 'lucide-svelte'
+  import { formatDate, formatTime, formatHours, getStatusBadge, downloadCSV } from '$lib/utils'
+  import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search, Trash2, Download } from 'lucide-svelte'
   import AvatarUpload from '$lib/components/AvatarUpload.svelte'
+  import DateRangeModal from '$lib/components/DateRangeModal.svelte'
   import { user as currentUser } from '$lib/stores/auth'
   import { authStore } from '$lib/stores/auth'
 
@@ -172,6 +173,7 @@
   async function viewDetails(emp: any) {
     viewEmployee = emp
     leaveSaved = false; leaveError = ''
+    showExportRangeModal = false
     const now = new Date()
     const [att, lb] = await Promise.all([
       api.getEmployeeAttendance(emp.id, now.getMonth() + 1, now.getFullYear()),
@@ -180,10 +182,51 @@
     empAttendance = att
     empLeaveBalance = lb
     leaveForm = {
-      sickLeave: lb?.sickLeave ?? 12,
+      sickLeave:   lb?.sickLeave   ?? 12,
       casualLeave: lb?.casualLeave ?? 12,
-      earnedLeave: lb?.earnedLeave ?? 15,
-      wfhLeave: lb?.wfhLeave ?? 24,
+      earnedLeave: lb?.earnedLeave ?? 0,
+      wfhLeave:    lb?.wfhLeave    ?? 0,
+    }
+  }
+
+  let showExportRangeModal = false
+  let exportRangeLoading = false
+
+  async function exportEmployeeCSVRange(rangeStart: string, rangeEnd: string) {
+    if (!viewEmployee) return
+    try {
+      exportRangeLoading = true
+      const records = await api.getEmployeeAttendanceRange(viewEmployee.id, rangeStart, rangeEnd)
+      const recMap: Record<string, any> = Object.fromEntries(records.map((r: any) => [r.date, r]))
+
+      const candidates: Date[] = []
+      if (platformStart) candidates.push(platformStart)
+      if (viewEmployee.createdAt) {
+        const d = new Date(viewEmployee.createdAt); d.setHours(0, 0, 0, 0)
+        candidates.push(d)
+      }
+      const rangeTrackingStart = candidates.length
+        ? candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
+        : null
+      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+
+      const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+      const rows: string[][] = []
+      for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+        if (rangeTrackingStart && d < rangeTrackingStart) continue
+        if (d > todayMidnight) break
+        if (d.getDay() === 0) continue
+        const dateStr = d.toISOString().split('T')[0]
+        const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
+        const badge = getStatusBadge(record.status)
+        const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
+        rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
+          record.workingHours ? formatHours(record.workingHours) : '-', badge.label])
+      }
+      downloadCSV(`${viewEmployee.name}_${rangeStart}_to_${rangeEnd}.csv`, [header, ...rows])
+      showExportRangeModal = false
+    } finally {
+      exportRangeLoading = false
     }
   }
 
@@ -191,7 +234,13 @@
     if (!viewEmployee) return
     try {
       leaveSaving = true; leaveError = ''; leaveSaved = false
-      empLeaveBalance = await api.setEmployeeLeaveBalance(viewEmployee.id, leaveForm)
+      const payload = {
+        sickLeave:   leaveForm.sickLeave   ?? 0,
+        casualLeave: leaveForm.casualLeave ?? 0,
+        earnedLeave: leaveForm.earnedLeave ?? 0,
+        wfhLeave:    leaveForm.wfhLeave    ?? 0,
+      }
+      empLeaveBalance = await api.setEmployeeLeaveBalance(viewEmployee.id, payload)
       leaveSaved = true
       setTimeout(() => leaveSaved = false, 3000)
     } catch (e: any) {
@@ -599,7 +648,13 @@
         <!-- This month attendance (only in view mode) -->
         {#if !editMode}
         <div>
-          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">This Month Attendance</h3>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">This Month Attendance</h3>
+            <button on:click={() => showExportRangeModal = true}
+              class="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1.5">
+              <Download size={12} /> Export CSV
+            </button>
+          </div>
           <div class="overflow-x-auto rounded-lg border border-[var(--color-border)]">
             <table class="w-full text-xs">
               <thead class="bg-[var(--color-faint)]">
@@ -630,6 +685,16 @@
       </div>
     </div>
   </div>
+{/if}
+
+<!-- Export Attendance Date Range Modal -->
+{#if showExportRangeModal && viewEmployee}
+  <DateRangeModal
+    title="Export {viewEmployee.name}'s Attendance"
+    loading={exportRangeLoading}
+    onConfirm={exportEmployeeCSVRange}
+    onClose={() => showExportRangeModal = false}
+  />
 {/if}
 
 <!-- Admin Reset Employee Password Modal -->

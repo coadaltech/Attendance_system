@@ -62,10 +62,8 @@ export const api = {
   },
   adminMarkAttendance: (data: { employeeId: number; date: string; punchIn?: string; punchOut?: string; status?: string; notes?: string }) =>
     request<any>('/attendance/admin-mark', { method: 'POST', body: JSON.stringify(data) }),
-  getExportAll: (month?: number, year?: number) => {
-    const params = new URLSearchParams()
-    if (month) params.set('month', String(month))
-    if (year)  params.set('year',  String(year))
+  getExportAll: (startDate: string, endDate: string) => {
+    const params = new URLSearchParams({ startDate, endDate })
     return request<any>(`/attendance/export-all?${params}`)
   },
   getAttendanceSummary: (month?: number, year?: number) => {
@@ -78,6 +76,10 @@ export const api = {
     const params = new URLSearchParams()
     if (month) params.set('month', String(month))
     if (year) params.set('year', String(year))
+    return request<any[]>(`/attendance/employee/${id}?${params}`)
+  },
+  getEmployeeAttendanceRange: (id: number, startDate: string, endDate: string) => {
+    const params = new URLSearchParams({ startDate, endDate })
     return request<any[]>(`/attendance/employee/${id}?${params}`)
   },
 

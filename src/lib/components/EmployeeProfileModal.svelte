@@ -3,6 +3,7 @@
   import { X, ChevronLeft, ChevronRight, Calendar, Umbrella, Clock, TrendingUp, UserCheck, UserX, Download } from 'lucide-svelte'
   import { api } from '$lib/api'
   import { formatDate, formatTime, formatHours, MONTHS, getDaysInMonth, getFirstDayOfMonth, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV } from '$lib/utils'
+  import DateRangeModal from './DateRangeModal.svelte'
 
   export let employee: any
   export let allLeaves: any[] = []
@@ -138,16 +139,42 @@
     loadAttendance()
   }
 
-  function exportEmployeeCSV() {
-    const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
-    const rows = displayRecords.map(r => {
-      const dayName = new Date(r.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })
-      const statusLabel = r.punchIn && !r.punchOut ? 'In Office'
-        : ({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent' }[r.status] ?? r.status)
-      return [formatDate(r.date), dayName, formatTime(r.punchIn), formatTime(r.punchOut),
-        r.workingHours ? formatHours(r.workingHours) : '-', statusLabel]
-    })
-    downloadCSV(`${employee.name}_${MONTHS[currentMonth - 1]}_${currentYear}.csv`, [header, ...rows])
+  let showExportRangeModal = false
+  let exportRangeLoading = false
+
+  async function exportEmployeeCSVRange(rangeStart: string, rangeEnd: string) {
+    try {
+      exportRangeLoading = true
+      const records = await api.getEmployeeAttendanceRange(employee.id, rangeStart, rangeEnd)
+      const recMap: Record<string, any> = Object.fromEntries(records.map((r: any) => [r.date, r]))
+
+      const candidates: Date[] = []
+      if (platformStart) { const d = new Date(platformStart); d.setHours(0, 0, 0, 0); candidates.push(d) }
+      if (employee.createdAt) { const d = new Date(employee.createdAt); d.setHours(0, 0, 0, 0); candidates.push(d) }
+      const rangeTrackingStart = candidates.length
+        ? candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
+        : null
+      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+
+      const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+      const rows: string[][] = []
+      for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+        if (rangeTrackingStart && d < rangeTrackingStart) continue
+        if (d > todayMidnight) break
+        const dateStr = d.toISOString().split('T')[0]
+        if (d.getDay() === 0 || holidayMap[dateStr]) continue
+        const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
+        const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
+        const statusLabel = record.punchIn && !record.punchOut ? 'In Office'
+          : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent' } as Record<string, string>)[record.status] ?? record.status)
+        rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
+          record.workingHours ? formatHours(record.workingHours) : '-', statusLabel])
+      }
+      downloadCSV(`${employee.name}_${rangeStart}_to_${rangeEnd}.csv`, [header, ...rows])
+      showExportRangeModal = false
+    } finally {
+      exportRangeLoading = false
+    }
   }
 
   function getDayStatus(day: number): string {
@@ -261,7 +288,7 @@
             {MONTHS[currentMonth - 1]} {currentYear}
           </h3>
           <div class="flex items-center gap-1">
-            <button on:click={exportEmployeeCSV} title="Export CSV"
+            <button on:click={() => showExportRangeModal = true} title="Export CSV"
               class="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1 text-xs font-medium px-2">
               <Download size={14} /> CSV
             </button>
@@ -455,3 +482,12 @@
 
   </div>
 </div>
+
+{#if showExportRangeModal}
+  <DateRangeModal
+    title="Export {employee.name}'s Attendance"
+    loading={exportRangeLoading}
+    onConfirm={exportEmployeeCSVRange}
+    onClose={() => showExportRangeModal = false}
+  />
+{/if}
