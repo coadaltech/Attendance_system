@@ -149,6 +149,11 @@
   let resetting = false
   let resetError = ''
 
+  let deleteModal: { show: boolean; employee: any } = { show: false, employee: null }
+  let deleteConfirmText = ''
+  let deleting = false
+  let deleteError = ''
+
   let leaveForm = { sickLeave: 12, casualLeave: 12, earnedLeave: 15, wfhLeave: 24 }
   let leaveSaving = false
   let leaveSaved = false
@@ -269,6 +274,27 @@
     await loadEmployees()
   }
 
+  function openDeleteModal(emp: any) {
+    if (emp.isActive) return
+    deleteModal = { show: true, employee: emp }
+    deleteConfirmText = ''; deleteError = ''
+  }
+
+  async function confirmDeleteEmployee() {
+    if (deleteConfirmText !== 'DELETE' || !deleteModal.employee) return
+    const id = deleteModal.employee.id
+    try {
+      deleting = true; deleteError = ''
+      await api.deleteEmployee(id)
+      deleteModal = { show: false, employee: null }
+      deleteConfirmText = ''
+      if (viewEmployee?.id === id) viewEmployee = null
+      await loadEmployees()
+    } catch (e: any) {
+      deleteError = e.message
+    } finally { deleting = false }
+  }
+
   async function resetAllData() {
     if (resetConfirmText !== 'RESET') return
     try {
@@ -355,6 +381,12 @@
               class="btn-secondary flex-1 justify-center text-xs py-1.5 {emp.isActive ? 'text-red-600 dark:text-red-400 hover:bg-red-500/15' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15'}">
               {#if emp.isActive}<UserX size={13} />{:else}<UserCheck size={13} />{/if}
               {emp.isActive ? 'Deactivate' : 'Activate'}
+            </button>
+            <button on:click={() => openDeleteModal(emp)} disabled={emp.isActive}
+              title={emp.isActive ? 'Deactivate the employee before deleting' : 'Delete Employee'}
+              class="btn-secondary justify-center text-xs py-1.5 px-2.5
+                {emp.isActive ? 'opacity-40 cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-red-500/15 border-red-500/30'}">
+              <Trash2 size={13} />
             </button>
           </div>
         </div>
@@ -475,6 +507,51 @@
               {resetConfirmText === 'RESET' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-500/10 text-red-500/50 cursor-not-allowed'}">
             <Trash2 size={15} />
             {resetting ? 'Deleting...' : 'Reset All Data'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Employee Modal -->
+{#if deleteModal.show && deleteModal.employee}
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-modal border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="flex items-center justify-between p-6 border-b border-red-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-red-500/15 rounded-full flex items-center justify-center">
+            <Trash2 size={18} class="text-red-600 dark:text-red-400" />
+          </div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete Employee</h2>
+        </div>
+        <button on:click={() => deleteModal = { show: false, employee: null }} class="p-2 hover:bg-[var(--color-subtle)] rounded-lg text-gray-500 dark:text-gray-400"><X size={18} /></button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-600 dark:text-red-400 space-y-1">
+          <p class="font-semibold">
+            {deleteModal.employee.name} ({deleteModal.employee.employeeCode}) permanently delete ho jayega. Yeh action undo nahi ho sakti:
+          </p>
+          <ul class="list-disc pl-4 space-y-0.5 mt-1">
+            <li>Employee ka account delete ho jayega</li>
+            <li>Unka saara attendance history delete ho jayega</li>
+            <li>Unki saari leaves aur leave balance delete ho jayengi</li>
+          </ul>
+        </div>
+        <div>
+          <label for="delete-confirm" class="label">Confirm karne ke liye <span class="font-mono font-bold text-red-500">DELETE</span> type karein</label>
+          <input id="delete-confirm" bind:value={deleteConfirmText} class="input" placeholder="DELETE" autocomplete="off" />
+        </div>
+        {#if deleteError}
+          <p class="text-sm text-red-600 dark:text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{deleteError}</p>
+        {/if}
+        <div class="flex gap-3 pt-1">
+          <button on:click={() => deleteModal = { show: false, employee: null }} class="btn-secondary flex-1 justify-center">Cancel</button>
+          <button on:click={confirmDeleteEmployee} disabled={deleteConfirmText !== 'DELETE' || deleting}
+            class="flex-1 justify-center flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+              {deleteConfirmText === 'DELETE' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-500/10 text-red-500/50 cursor-not-allowed'}">
+            <Trash2 size={15} />
+            {deleting ? 'Deleting...' : 'Delete Employee'}
           </button>
         </div>
       </div>

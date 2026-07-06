@@ -115,6 +115,7 @@ export const api = {
   updateEmployee: (id: number, data: any) =>
     request<any>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   toggleEmployee: (id: number) => request(`/employees/${id}/toggle`, { method: 'PATCH' }),
+  deleteEmployee: (id: number) => request(`/employees/${id}`, { method: 'DELETE' }),
   resetAllData: () => request('/employees/reset-all', { method: 'DELETE' }),
 
   // Holidays
