@@ -128,4 +128,11 @@ export const api = {
   approveHoliday: (id: number) => request<any>(`/holidays/${id}/approve`, { method: 'PATCH' }),
   revokeHoliday: (id: number) => request<any>(`/holidays/${id}/revoke`, { method: 'PATCH' }),
   deleteHoliday: (id: number) => request(`/holidays/${id}`, { method: 'DELETE' }),
+
+  // Announcements
+  getActiveAnnouncements: () => request<any[]>('/announcements/active'),
+  getAllAnnouncements: () => request<any[]>('/announcements'),
+  createAnnouncement: (data: { title: string; message: string; durationDays: number }) =>
+    request<any>('/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  deleteAnnouncement: (id: number) => request(`/announcements/${id}`, { method: 'DELETE' }),
 }

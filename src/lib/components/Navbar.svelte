@@ -2,7 +2,7 @@
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { authStore, user, isAdmin } from '$lib/stores/auth'
-  import { Menu, X, LayoutDashboard, Clock, Calendar, Users, LogOut, ChevronDown, Building2, CalendarDays, Camera, Lock, Eye, EyeOff, Sun, Moon } from 'lucide-svelte'
+  import { Menu, X, LayoutDashboard, Clock, Calendar, Users, LogOut, ChevronDown, Building2, CalendarDays, Camera, Lock, Eye, EyeOff, Sun, Moon, Megaphone } from 'lucide-svelte'
   import AvatarUpload from '$lib/components/AvatarUpload.svelte'
   import { api } from '$lib/api'
   import { themeStore } from '$lib/stores/theme'
@@ -47,6 +47,7 @@
 
   const adminItems = [
     { href: '/employees', label: 'Employees', icon: Users },
+    { href: '/announcements', label: 'Announcements', icon: Megaphone },
   ]
 
   function logout() {

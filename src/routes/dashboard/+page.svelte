@@ -7,7 +7,7 @@
   import EmployeeProfileModal from '$lib/components/EmployeeProfileModal.svelte'
   import AdminMarkAttendanceModal from '$lib/components/AdminMarkAttendanceModal.svelte'
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
-  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X, PenLine, Download } from 'lucide-svelte'
+  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X, PenLine, Download, Megaphone } from 'lucide-svelte'
   import { formatDate, formatTime, getLeaveTypeBadge, downloadCSV, MONTHS } from '$lib/utils'
 
   let selectedEmployee: any = null
@@ -55,6 +55,9 @@
   let loading = true
   let currentMonth = new Date().getMonth() + 1
   let currentYear = new Date().getFullYear()
+  let activeAnnouncements: any[] = []
+  let dismissedIds: number[] = []
+  $: visibleAnnouncements = activeAnnouncements.filter(a => !dismissedIds.includes(a.id))
 
   // employee-only
   let summary: any = null
@@ -91,14 +94,17 @@
   let profileRefreshTrigger = 0
 
   async function loadAdmin() {
-    const [emps, hols, leaves] = await Promise.all([
+    const [emps, hols, leaves, ann] = await Promise.all([
       api.getTodayAll(),
       api.getHolidays(currentYear),
       api.getAllLeaves(),
+      api.getActiveAnnouncements().catch(() => []),
     ])
     todayAll = emps
     holidays = hols
     allLeaves = leaves
+    activeAnnouncements = ann
+    pruneDismissedIds(ann)
   }
 
   async function onAdminSaved() {
@@ -107,19 +113,47 @@
   }
 
   async function loadEmployee(year: number, month: number) {
-    const [hist, sum, hols, lb] = await Promise.all([
+    const [hist, sum, hols, lb, ann] = await Promise.all([
       api.getAttendanceHistory(month, year),
       api.getAttendanceSummary(month, year),
       api.getHolidays(year),
       api.getLeaveBalance(year),
+      api.getActiveAnnouncements().catch(() => []),
     ])
     attendanceHistory = hist
     summary = sum
     holidays = hols
     leaveBalance = lb
+    activeAnnouncements = ann
+    pruneDismissedIds(ann)
+  }
+
+  // Dismiss only hides the announcement on this admin's own dashboard (persisted locally).
+  // It stays visible to everyone else and must be deleted from the Announcements page to remove it for good.
+  function loadDismissedIds() {
+    if (typeof localStorage === 'undefined') return
+    try { dismissedIds = JSON.parse(localStorage.getItem('dismissedAnnouncementIds') || '[]') }
+    catch { dismissedIds = [] }
+  }
+
+  function saveDismissedIds() {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem('dismissedAnnouncementIds', JSON.stringify(dismissedIds))
+  }
+
+  function pruneDismissedIds(active: any[]) {
+    const activeIds = active.map(a => a.id)
+    dismissedIds = dismissedIds.filter(id => activeIds.includes(id))
+    saveDismissedIds()
+  }
+
+  function dismissAnnouncement(id: number) {
+    dismissedIds = [...dismissedIds, id]
+    saveDismissedIds()
   }
 
   onMount(async () => {
+    loadDismissedIds()
     try {
       if ($isAdmin) await loadAdmin()
       else await loadEmployee(currentYear, currentMonth)
@@ -153,6 +187,26 @@
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Good {greeting}, {$user?.name?.split(' ')[0]}!</h1>
     <p class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
   </div>
+
+  {#if !loading && visibleAnnouncements.length > 0}
+    <div class="space-y-2">
+      {#each visibleAnnouncements as a (a.id)}
+        <div class="card flex items-start gap-3 border-l-4 border-l-brand-500 py-3">
+          <Megaphone size={16} class="text-brand-600 dark:text-brand-400 mt-0.5 flex-shrink-0" />
+          <div class="min-w-0 flex-1">
+            <p class="font-medium text-sm text-gray-900 dark:text-gray-100">{a.title}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5 whitespace-pre-wrap">{a.message}</p>
+          </div>
+          {#if $isAdmin}
+            <button on:click={() => dismissAnnouncement(a.id)} title="Hide from my dashboard only — delete it from the Announcements page to remove it for everyone"
+              class="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0">
+              <X size={15} />
+            </button>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   {#if loading}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
