@@ -7,6 +7,7 @@
   import { authStore, isLoggedIn } from '$lib/stores/auth'
   import { themeStore } from '$lib/stores/theme'
   import Navbar from '$lib/components/Navbar.svelte'
+  import AnnouncementBanner from '$lib/components/AnnouncementBanner.svelte'
 
   // Initialize auth synchronously so $isAdmin is ready before any page onMount runs.
   // Child onMount runs before parent onMount in Svelte, so putting init() here
@@ -29,6 +30,7 @@
   <div class="min-h-screen bg-page">
     <Navbar />
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <AnnouncementBanner />
       <slot />
     </main>
   </div>
