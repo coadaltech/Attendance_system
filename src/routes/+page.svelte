@@ -25,6 +25,7 @@
   }
 </script>
 
+
 <div class="min-h-screen bg-page flex items-center justify-center p-4">
   <div class="w-full max-w-md">
     <!-- Logo -->
