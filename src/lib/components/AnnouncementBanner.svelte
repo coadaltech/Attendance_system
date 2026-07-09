@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { afterNavigate } from '$app/navigation'
   import { page } from '$app/stores'
-  import { isAdmin } from '$lib/stores/auth'
+  import { get } from 'svelte/store'
+  import { isAdmin, user } from '$lib/stores/auth'
   import { api } from '$lib/api'
   import { Megaphone, X } from 'lucide-svelte'
 
@@ -9,12 +11,19 @@
 
   $: visibleAnnouncements = activeAnnouncements.filter(a => !dismissedIds.includes(a.id))
 
-  function saveDismissedIds() {
-    if (typeof localStorage === 'undefined') return
-    localStorage.setItem('dismissedAnnouncementIds', JSON.stringify(dismissedIds))
+  // Scoped per logged-in account so dismissals don't leak across users sharing a browser.
+  function storageKey(): string | null {
+    const u = get(user)
+    if (!u || typeof localStorage === 'undefined') return null
+    return `dismissedAnnouncementIds_${u.id}`
   }
 
-  // Only hides the announcement in this browser — everyone else still sees it.
+  function saveDismissedIds() {
+    const key = storageKey()
+    if (key) localStorage.setItem(key, JSON.stringify(dismissedIds))
+  }
+
+  // Only hides the announcement for this account in this browser — everyone else still sees it.
   // Deleting it for good is only possible from the Announcements page.
   function dismissAnnouncement(id: number) {
     dismissedIds = [...dismissedIds, id]
@@ -22,9 +31,12 @@
   }
 
   async function refresh() {
-    if (typeof localStorage !== 'undefined') {
-      try { dismissedIds = JSON.parse(localStorage.getItem('dismissedAnnouncementIds') || '[]') }
+    const key = storageKey()
+    if (key) {
+      try { dismissedIds = JSON.parse(localStorage.getItem(key) || '[]') }
       catch { dismissedIds = [] }
+    } else {
+      dismissedIds = []
     }
     try { activeAnnouncements = await api.getActiveAnnouncements() }
     catch { activeAnnouncements = [] }
@@ -33,9 +45,10 @@
     saveDismissedIds()
   }
 
-  // Re-fetch on every navigation so newly posted / expired announcements
-  // show up without needing a full page reload.
-  $: $page.url.pathname, refresh()
+  // afterNavigate is client-only — fires once on mount and again on every
+  // subsequent navigation, but (unlike a top-level reactive statement) never
+  // runs during SSR, so this never hits the API unauthenticated on the server.
+  afterNavigate(refresh)
 </script>
 
 {#if visibleAnnouncements.length > 0 && $page.url.pathname !== '/announcements'}

@@ -1,13 +1,37 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { authStore, user, isAdmin } from '$lib/stores/auth'
-  import { Menu, X, LayoutDashboard, Clock, Calendar, Users, LogOut, ChevronDown, Building2, CalendarDays, Camera, Lock, Eye, EyeOff, Sun, Moon, Megaphone } from 'lucide-svelte'
+  import { Menu, X, LayoutDashboard, Clock, Calendar, Users, LogOut, ChevronDown, Building2, CalendarDays, Camera, Lock, Eye, EyeOff, Sun, Moon, Megaphone, Bell, BellOff } from 'lucide-svelte'
   import AvatarUpload from '$lib/components/AvatarUpload.svelte'
   import { api } from '$lib/api'
   import { themeStore } from '$lib/stores/theme'
+  import { getPushPermission, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '$lib/push'
 
   let mobileOpen = false
+
+  let notifPermission: NotificationPermission | 'unsupported' = 'unsupported'
+  let notifSubscribed = false
+  let notifBusy = false
+
+  async function refreshNotifState() {
+    notifPermission = getPushPermission()
+    notifSubscribed = notifPermission === 'granted' ? await isPushSubscribed() : false
+  }
+
+  async function toggleNotifications() {
+    notifBusy = true
+    try {
+      if (notifSubscribed) await unsubscribeFromPush()
+      else await subscribeToPush()
+    } finally {
+      await refreshNotifState()
+      notifBusy = false
+    }
+  }
+
+  onMount(refreshNotifState)
 
   let showPassModal = false
   let passForm = { old: '', new_: '', confirm: '' }
@@ -30,7 +54,7 @@
     if (passForm.new_ !== passForm.confirm) { passError = 'New password aur confirm password match nahi kar rahe'; return }
     try {
       passSaving = true; passError = ''
-      await api.changePassword($user!.id, passForm.old, passForm.new_)
+      await api.changePassword(passForm.old, passForm.new_)
       passSuccess = true
       setTimeout(() => { showPassModal = false; passSuccess = false }, 1800)
     } catch (e: any) {
@@ -130,6 +154,18 @@
                 <Lock size={14} />
                 Change Password
               </button>
+              {#if notifPermission !== 'unsupported'}
+                <button on:click={toggleNotifications} disabled={notifBusy || notifPermission === 'denied'}
+                  title={notifPermission === 'denied' ? 'Blocked in your browser settings' : ''}
+                  class="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors
+                    {notifPermission === 'denied' ? 'text-gray-500 cursor-not-allowed' : 'text-gray-300 hover:bg-white/8'}">
+                  {#if notifSubscribed}
+                    <BellOff size={14} /> Turn Off Notifications
+                  {:else}
+                    <Bell size={14} /> {notifPermission === 'denied' ? 'Notifications Blocked' : 'Enable Notifications'}
+                  {/if}
+                </button>
+              {/if}
               <button on:click={themeStore.toggle}
                 class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-white/8 transition-colors">
                 {#if $themeStore === 'dark'}
@@ -196,6 +232,17 @@
           <Lock size={16} />
           Change Password
         </button>
+        {#if notifPermission !== 'unsupported'}
+          <button on:click={toggleNotifications} disabled={notifBusy || notifPermission === 'denied'}
+            class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+              {notifPermission === 'denied' ? 'text-white/30 cursor-not-allowed' : 'text-white/70 hover:bg-white/10 hover:text-white'}">
+            {#if notifSubscribed}
+              <BellOff size={16} /> Turn Off Notifications
+            {:else}
+              <Bell size={16} /> {notifPermission === 'denied' ? 'Notifications Blocked' : 'Enable Notifications'}
+            {/if}
+          </button>
+        {/if}
         <button on:click={() => { mobileOpen = false; themeStore.toggle() }}
           class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors">
           {#if $themeStore === 'dark'}

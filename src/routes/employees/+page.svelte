@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { isAdmin } from '$lib/stores/auth'
   import { api } from '$lib/api'
-  import { formatDate, formatTime, formatHours, getStatusBadge, downloadCSV } from '$lib/utils'
+  import { formatDate, formatTime, formatHours, getStatusBadge, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV } from '$lib/utils'
   import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search, Trash2, Download } from 'lucide-svelte'
   import AvatarUpload from '$lib/components/AvatarUpload.svelte'
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
@@ -18,6 +18,8 @@
   let viewEmployee: any = null
   let empAttendance: any[] = []
   let empLeaveBalance: any = null
+  let allLeaves: any[] = []
+  $: viewEmployeeLeaves = allLeaves.filter(l => l.employee?.id === viewEmployee?.id || l.employeeId === viewEmployee?.id)
 
   // Platform start = earliest createdAt among non-admin employees
   // (admin may have been created earlier for system setup)
@@ -166,13 +168,17 @@
 
   onMount(async () => {
     if (!$isAdmin) { goto('/dashboard'); return }
-    await loadEmployees()
+    await Promise.all([loadEmployees(), loadAllLeaves()])
   })
 
   async function loadEmployees() {
     loading = true
     try { employees = await api.getEmployees() }
     finally { loading = false }
+  }
+
+  async function loadAllLeaves() {
+    try { allLeaves = await api.getAllLeaves() } catch { allLeaves = [] }
   }
 
   async function viewDetails(emp: any) {
@@ -757,6 +763,41 @@
               </tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Leave Requests -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Leave Requests</h3>
+          {#if viewEmployeeLeaves.length === 0}
+            <p class="text-center py-6 text-sm text-gray-400 dark:text-gray-500 rounded-lg border border-[var(--color-border)]">
+              No leave requests from {viewEmployee.name?.split(' ')[0]}
+            </p>
+          {:else}
+            <div class="border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <div class="divide-y divide-[var(--color-divide)] max-h-56 overflow-y-auto">
+                {#each viewEmployeeLeaves.slice().reverse() as leave}
+                  {@const typeBadge = getLeaveTypeBadge(leave.leaveType)}
+                  {@const statusBadge = getLeaveStatusBadge(leave.status)}
+                  <div class="px-4 py-2.5 text-sm">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="{typeBadge.class}">{typeBadge.label}</span>
+                      <span class="{statusBadge.class}">{statusBadge.label}</span>
+                      <span class="text-xs text-gray-400 dark:text-gray-500">{leave.totalDays} day{leave.totalDays !== 1 ? 's' : ''}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {formatDate(leave.startDate)} → {formatDate(leave.endDate)}
+                    </p>
+                    {#if leave.reason}
+                      <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{leave.reason}</p>
+                    {/if}
+                    {#if leave.rejectionReason}
+                      <p class="text-xs text-red-500 dark:text-red-400 mt-0.5">Rejected: {leave.rejectionReason}</p>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
         </div>
         {/if}
       </div>

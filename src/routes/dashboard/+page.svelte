@@ -7,7 +7,7 @@
   import EmployeeProfileModal from '$lib/components/EmployeeProfileModal.svelte'
   import AdminMarkAttendanceModal from '$lib/components/AdminMarkAttendanceModal.svelte'
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
-  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, X, PenLine, Download } from 'lucide-svelte'
+  import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, PenLine, Download } from 'lucide-svelte'
   import { formatDate, formatTime, getLeaveTypeBadge, downloadCSV, MONTHS } from '$lib/utils'
 
   let selectedEmployee: any = null
@@ -35,7 +35,7 @@
           const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
           const statusLabel = !r ? 'Absent'
             : r.punchIn && !r.punchOut ? 'In Office'
-            : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent' } as Record<string, string>)[r?.status] ?? r?.status)
+            : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent', on_leave: 'On Leave' } as Record<string, string>)[r?.status] ?? r?.status)
           const hrs = r?.workingHours ? `${Math.floor(Number(r.workingHours))}h ${Math.round((Number(r.workingHours) % 1) * 60)}m` : '-'
           rows.push([emp.name, emp.employeeCode, emp.department ?? '-', dateStr, dayName,
             r?.punchIn  ? new Date(r.punchIn).toLocaleTimeString('en-IN',  { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
@@ -235,6 +235,8 @@
                     <span class="badge badge-green">In Office</span>
                   {:else if att?.punchOut}
                     <span class="badge badge-blue">Checked Out</span>
+                  {:else if att?.status === 'on_leave'}
+                    <span class="badge badge-indigo">On Leave</span>
                   {:else}
                     <span class="badge badge-red">Absent</span>
                   {/if}

@@ -37,6 +37,7 @@
       overtime: 'bg-purple-500 text-white',
       half_day: 'bg-amber-400 text-white',
       absent:   'bg-red-400 text-white',
+      on_leave: 'bg-indigo-500 text-white',
       holiday:  'bg-blue-500 text-white',
       weekend:  'bg-[var(--color-subtle)] text-gray-400 dark:text-gray-500',
       none:     'bg-[var(--color-faint)] text-gray-600 dark:text-gray-300 hover:bg-[var(--color-subtle)]',
@@ -89,6 +90,7 @@
       { color: 'bg-amber-400', label: 'Half Day' },
       { color: 'bg-purple-500', label: 'Overtime' },
       { color: 'bg-red-400', label: 'Absent' },
+      { color: 'bg-indigo-500', label: 'On Leave' },
       { color: 'bg-blue-500', label: 'Holiday' },
       { color: 'bg-[var(--color-subtle)]', label: 'Weekend' },
     ] as item}

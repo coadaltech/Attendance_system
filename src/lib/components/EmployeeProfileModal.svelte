@@ -166,7 +166,7 @@
         const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
         const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
         const statusLabel = record.punchIn && !record.punchOut ? 'In Office'
-          : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent' } as Record<string, string>)[record.status] ?? record.status)
+          : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent', on_leave: 'On Leave' } as Record<string, string>)[record.status] ?? record.status)
         rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
           record.workingHours ? formatHours(record.workingHours) : '-', statusLabel])
       }
@@ -197,6 +197,7 @@
       overtime:  'bg-purple-500 text-white',
       half_day:  'bg-amber-400 text-white',
       absent:    'bg-red-400 text-white',
+      on_leave:  'bg-indigo-500 text-white',
       holiday:   'bg-blue-500 text-white',
       weekend:   'bg-[var(--color-subtle)] text-gray-400 dark:text-gray-500',
       none:      'bg-[var(--color-faint)] text-gray-500 dark:text-gray-400',
@@ -351,6 +352,7 @@
               { color: 'bg-amber-400',   label: 'Half Day' },
               { color: 'bg-purple-500',  label: 'Overtime' },
               { color: 'bg-red-400',     label: 'Absent' },
+              { color: 'bg-indigo-500',  label: 'On Leave' },
               { color: 'bg-blue-500',    label: 'Holiday' },
               { color: 'bg-[var(--color-subtle)]', label: 'Weekend' },
             ] as item}
@@ -380,6 +382,7 @@
                     overtime: { cls: 'badge-purple', label: 'Overtime' },
                     half_day: { cls: 'badge-yellow', label: 'Half Day' },
                     absent:   { cls: 'badge-red',    label: 'Absent' },
+                    on_leave: { cls: 'badge-indigo',  label: 'On Leave' },
                   }
                   return m[record.status] ?? { cls: 'badge-gray', label: record.status }
                 })()}

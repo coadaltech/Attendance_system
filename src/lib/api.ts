@@ -42,9 +42,9 @@ export const api = {
     request<{ token: string; employee: any }>('/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password }),
     }),
-  changePassword: (employeeId: number, oldPassword: string, newPassword: string) =>
+  changePassword: (oldPassword: string, newPassword: string) =>
     request('/auth/change-password', {
-      method: 'POST', body: JSON.stringify({ employeeId, oldPassword, newPassword }),
+      method: 'POST', body: JSON.stringify({ oldPassword, newPassword }),
     }),
 
   // Attendance
@@ -135,4 +135,10 @@ export const api = {
   createAnnouncement: (data: { title: string; message: string; durationDays: number }) =>
     request<any>('/announcements', { method: 'POST', body: JSON.stringify(data) }),
   deleteAnnouncement: (id: number) => request(`/announcements/${id}`, { method: 'DELETE' }),
+
+  // Push notifications
+  subscribePush: (data: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    request('/push/subscribe', { method: 'POST', body: JSON.stringify(data) }),
+  unsubscribePush: (endpoint: string) =>
+    request('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
 }

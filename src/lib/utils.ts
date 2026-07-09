@@ -22,6 +22,7 @@ export function getStatusBadge(status: string): { class: string; label: string }
     half_day: { class: 'badge-yellow', label: 'Half Day' },
     overtime: { class: 'badge-purple', label: 'Overtime' },
     absent: { class: 'badge-red', label: 'Absent' },
+    on_leave: { class: 'badge-indigo', label: 'On Leave' },
     holiday: { class: 'badge-blue', label: 'Holiday' },
     weekend: { class: 'badge-gray', label: 'Weekend' },
   }
