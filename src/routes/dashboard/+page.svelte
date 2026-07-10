@@ -9,7 +9,7 @@
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
   import AttendanceRangeViewModal from '$lib/components/AttendanceRangeViewModal.svelte'
   import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, PenLine, Download } from 'lucide-svelte'
-  import { formatDate, formatTime, getLeaveTypeBadge, downloadCSV, MONTHS } from '$lib/utils'
+  import { formatDate, formatTime, getLeaveTypeBadge, downloadCSV, toDateStr, MONTHS } from '$lib/utils'
 
   let selectedEmployee: any = null
   let markAttModal: { show: boolean; employee: any } = { show: false, employee: null }
@@ -31,7 +31,7 @@
       for (let d = new Date(startDate + 'T00:00:00'); d <= new Date(endDate + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
         if (d > new Date()) break
         if (d.getDay() === 0) continue
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = toDateStr(d)
         const r = recMap[dateStr]?.[emp.id]
         const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
         const statusLabel = !r ? 'Absent'

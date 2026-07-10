@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { X, ChevronLeft, ChevronRight, Calendar, Umbrella, Clock, TrendingUp, UserCheck, UserX, Download } from 'lucide-svelte'
   import { api } from '$lib/api'
-  import { formatDate, formatTime, formatHours, MONTHS, getDaysInMonth, getFirstDayOfMonth, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV } from '$lib/utils'
+  import { formatDate, formatTime, formatHours, MONTHS, getDaysInMonth, getFirstDayOfMonth, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV, toDateStr } from '$lib/utils'
   import DateRangeModal from './DateRangeModal.svelte'
   import AttendanceRangeViewModal from './AttendanceRangeViewModal.svelte'
 
@@ -162,7 +162,7 @@
     for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
       if (rangeTrackingStart && d < rangeTrackingStart) continue
       if (d > todayMidnight) break
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = toDateStr(d)
       if (d.getDay() === 0 || holidayMap[dateStr]) continue
       const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
       const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })

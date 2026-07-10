@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { isAdmin } from '$lib/stores/auth'
   import { api } from '$lib/api'
-  import { formatDate, formatTime, formatHours, getStatusBadge, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV } from '$lib/utils'
+  import { formatDate, formatTime, formatHours, getStatusBadge, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV, toDateStr } from '$lib/utils'
   import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search, Trash2, Download } from 'lucide-svelte'
   import AvatarUpload from '$lib/components/AvatarUpload.svelte'
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
@@ -228,7 +228,7 @@
       if (rangeTrackingStart && d < rangeTrackingStart) continue
       if (d > todayMidnight) break
       if (d.getDay() === 0) continue
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = toDateStr(d)
       const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
       const badge = getStatusBadge(record.status)
       const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })

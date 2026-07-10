@@ -48,6 +48,12 @@ export function getLeaveTypeBadge(type: string): { class: string; label: string 
   return map[type] || { class: 'badge-gray', label: type }
 }
 
+// Local calendar date as YYYY-MM-DD — never use d.toISOString() for this, it
+// converts to UTC and shifts the date back a day in timezones ahead of UTC (e.g. IST)
+export function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
