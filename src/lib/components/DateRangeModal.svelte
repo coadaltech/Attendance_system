@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { X, Download } from 'lucide-svelte'
+  import { X, Eye, Download } from 'lucide-svelte'
 
-  export let title = 'Export CSV'
-  export let loading = false
-  export let onConfirm: (startDate: string, endDate: string) => void
+  export let title = 'Attendance Range'
+  export let viewLoading = false
+  export let downloadLoading = false
+  export let onView: (startDate: string, endDate: string) => void
+  export let onDownload: (startDate: string, endDate: string) => void
   export let onClose: () => void = () => {}
 
   const today = new Date().toISOString().split('T')[0]
@@ -16,11 +18,19 @@
   let endDate = today
   let error = ''
 
-  function confirm() {
-    if (!startDate || !endDate) { error = 'Please select both dates'; return }
-    if (startDate > endDate) { error = 'From date must be before To date'; return }
+  function validate() {
+    if (!startDate || !endDate) { error = 'Please select both dates'; return false }
+    if (startDate > endDate) { error = 'From date must be before To date'; return false }
     error = ''
-    onConfirm(startDate, endDate)
+    return true
+  }
+
+  function view() {
+    if (validate()) onView(startDate, endDate)
+  }
+
+  function download() {
+    if (validate()) onDownload(startDate, endDate)
   }
 </script>
 
@@ -47,8 +57,11 @@
       {/if}
       <div class="flex gap-3 pt-1">
         <button on:click={onClose} class="btn-secondary flex-1 justify-center">Cancel</button>
-        <button on:click={confirm} disabled={loading} class="btn-primary flex-1 justify-center">
-          <Download size={14} /> {loading ? 'Exporting...' : 'Export'}
+        <button on:click={view} disabled={viewLoading || downloadLoading} class="btn-secondary flex-1 justify-center">
+          <Eye size={14} /> {viewLoading ? 'Loading...' : 'View'}
+        </button>
+        <button on:click={download} disabled={viewLoading || downloadLoading} class="btn-primary flex-1 justify-center">
+          <Download size={14} /> {downloadLoading ? 'Exporting...' : 'Download'}
         </button>
       </div>
     </div>

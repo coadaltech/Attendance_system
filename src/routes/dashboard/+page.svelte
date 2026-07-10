@@ -7,43 +7,61 @@
   import EmployeeProfileModal from '$lib/components/EmployeeProfileModal.svelte'
   import AdminMarkAttendanceModal from '$lib/components/AdminMarkAttendanceModal.svelte'
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
+  import AttendanceRangeViewModal from '$lib/components/AttendanceRangeViewModal.svelte'
   import { Calendar, Clock, TrendingUp, Umbrella, Users, UserCheck, UserX, ClipboardList, Check, XCircle, PenLine, Download } from 'lucide-svelte'
   import { formatDate, formatTime, getLeaveTypeBadge, downloadCSV, MONTHS } from '$lib/utils'
 
   let selectedEmployee: any = null
   let markAttModal: { show: boolean; employee: any } = { show: false, employee: null }
+  let viewLoading = false
   let exportLoading = false
   let showExportRangeModal = false
+  let rangeViewData: { header: string[]; rows: string[][]; startDate: string; endDate: string } | null = null
 
-  async function exportAllCSV(startDate: string, endDate: string) {
+  async function buildAllRows(startDate: string, endDate: string) {
+    const data = await api.getExportAll(startDate, endDate)
+    const recMap: Record<string, Record<number, any>> = {}
+    for (const r of data.records) {
+      if (!recMap[r.date]) recMap[r.date] = {}
+      recMap[r.date][r.employeeId] = r
+    }
+    const header   = ['Employee', 'Code', 'Department', 'Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+    const rows: string[][] = []
+    for (const emp of data.employees) {
+      for (let d = new Date(startDate + 'T00:00:00'); d <= new Date(endDate + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+        if (d > new Date()) break
+        if (d.getDay() === 0) continue
+        const dateStr = d.toISOString().split('T')[0]
+        const r = recMap[dateStr]?.[emp.id]
+        const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
+        const statusLabel = !r ? 'Absent'
+          : r.punchIn && !r.punchOut ? 'In Office'
+          : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent', on_leave: 'On Leave' } as Record<string, string>)[r?.status] ?? r?.status)
+        const hrs = r?.workingHours ? `${Math.floor(Number(r.workingHours))}h ${Math.round((Number(r.workingHours) % 1) * 60)}m` : '-'
+        rows.push([emp.name, emp.employeeCode, emp.department ?? '-', dateStr, dayName,
+          r?.punchIn  ? new Date(r.punchIn).toLocaleTimeString('en-IN',  { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
+          r?.punchOut ? new Date(r.punchOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
+          hrs, statusLabel])
+      }
+    }
+    return { header, rows, startDate: data.startDate, endDate: data.endDate }
+  }
+
+  async function viewAllRange(startDate: string, endDate: string) {
+    try {
+      viewLoading = true
+      rangeViewData = await buildAllRows(startDate, endDate)
+      showExportRangeModal = false
+    } finally {
+      viewLoading = false
+    }
+  }
+
+  async function downloadAllCSV(startDate: string, endDate: string) {
     try {
       exportLoading = true
-      const data = await api.getExportAll(startDate, endDate)
-      const recMap: Record<string, Record<number, any>> = {}
-      for (const r of data.records) {
-        if (!recMap[r.date]) recMap[r.date] = {}
-        recMap[r.date][r.employeeId] = r
-      }
-      const header   = ['Employee', 'Code', 'Department', 'Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
-      const rows: string[][] = []
-      for (const emp of data.employees) {
-        for (let d = new Date(startDate + 'T00:00:00'); d <= new Date(endDate + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
-          if (d > new Date()) break
-          if (d.getDay() === 0) continue
-          const dateStr = d.toISOString().split('T')[0]
-          const r = recMap[dateStr]?.[emp.id]
-          const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
-          const statusLabel = !r ? 'Absent'
-            : r.punchIn && !r.punchOut ? 'In Office'
-            : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent', on_leave: 'On Leave' } as Record<string, string>)[r?.status] ?? r?.status)
-          const hrs = r?.workingHours ? `${Math.floor(Number(r.workingHours))}h ${Math.round((Number(r.workingHours) % 1) * 60)}m` : '-'
-          rows.push([emp.name, emp.employeeCode, emp.department ?? '-', dateStr, dayName,
-            r?.punchIn  ? new Date(r.punchIn).toLocaleTimeString('en-IN',  { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
-            r?.punchOut ? new Date(r.punchOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
-            hrs, statusLabel])
-        }
-      }
-      downloadCSV(`Attendance_${data.startDate}_to_${data.endDate}.csv`, [header, ...rows])
+      const { header, rows, startDate: s, endDate: e } = await buildAllRows(startDate, endDate)
+      downloadCSV(`Attendance_${s}_to_${e}.csv`, [header, ...rows])
       showExportRangeModal = false
     } finally {
       exportLoading = false
@@ -342,10 +360,24 @@
 <!-- Export CSV Date Range Modal -->
 {#if showExportRangeModal}
   <DateRangeModal
-    title="Export All Attendance"
-    loading={exportLoading}
-    onConfirm={exportAllCSV}
+    title="Attendance: All Employees"
+    {viewLoading}
+    downloadLoading={exportLoading}
+    onView={viewAllRange}
+    onDownload={downloadAllCSV}
     onClose={() => showExportRangeModal = false}
+  />
+{/if}
+
+<!-- Attendance Range View Modal -->
+{#if rangeViewData}
+  <AttendanceRangeViewModal
+    title="Attendance: All Employees"
+    subtitle="{formatDate(rangeViewData.startDate)} → {formatDate(rangeViewData.endDate)}"
+    header={rangeViewData.header}
+    rows={rangeViewData.rows}
+    filename="Attendance_{rangeViewData.startDate}_to_{rangeViewData.endDate}.csv"
+    onClose={() => rangeViewData = null}
   />
 {/if}
 

@@ -4,6 +4,7 @@
   import { api } from '$lib/api'
   import { formatDate, formatTime, formatHours, MONTHS, getDaysInMonth, getFirstDayOfMonth, getLeaveTypeBadge, getLeaveStatusBadge, downloadCSV } from '$lib/utils'
   import DateRangeModal from './DateRangeModal.svelte'
+  import AttendanceRangeViewModal from './AttendanceRangeViewModal.svelte'
 
   export let employee: any
   export let allLeaves: any[] = []
@@ -140,36 +141,53 @@
   }
 
   let showExportRangeModal = false
+  let viewRangeLoading = false
   let exportRangeLoading = false
+  let rangeViewData: { header: string[]; rows: string[][]; startDate: string; endDate: string } | null = null
 
-  async function exportEmployeeCSVRange(rangeStart: string, rangeEnd: string) {
+  async function buildEmployeeRows(rangeStart: string, rangeEnd: string) {
+    const records = await api.getEmployeeAttendanceRange(employee.id, rangeStart, rangeEnd)
+    const recMap: Record<string, any> = Object.fromEntries(records.map((r: any) => [r.date, r]))
+
+    const candidates: Date[] = []
+    if (platformStart) { const d = new Date(platformStart); d.setHours(0, 0, 0, 0); candidates.push(d) }
+    if (employee.createdAt) { const d = new Date(employee.createdAt); d.setHours(0, 0, 0, 0); candidates.push(d) }
+    const rangeTrackingStart = candidates.length
+      ? candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
+      : null
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+
+    const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+    const rows: string[][] = []
+    for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+      if (rangeTrackingStart && d < rangeTrackingStart) continue
+      if (d > todayMidnight) break
+      const dateStr = d.toISOString().split('T')[0]
+      if (d.getDay() === 0 || holidayMap[dateStr]) continue
+      const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
+      const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
+      const statusLabel = record.punchIn && !record.punchOut ? 'In Office'
+        : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent', on_leave: 'On Leave' } as Record<string, string>)[record.status] ?? record.status)
+      rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
+        record.workingHours ? formatHours(record.workingHours) : '-', statusLabel])
+    }
+    return { header, rows, startDate: rangeStart, endDate: rangeEnd }
+  }
+
+  async function viewEmployeeRange(rangeStart: string, rangeEnd: string) {
+    try {
+      viewRangeLoading = true
+      rangeViewData = await buildEmployeeRows(rangeStart, rangeEnd)
+      showExportRangeModal = false
+    } finally {
+      viewRangeLoading = false
+    }
+  }
+
+  async function downloadEmployeeCSVRange(rangeStart: string, rangeEnd: string) {
     try {
       exportRangeLoading = true
-      const records = await api.getEmployeeAttendanceRange(employee.id, rangeStart, rangeEnd)
-      const recMap: Record<string, any> = Object.fromEntries(records.map((r: any) => [r.date, r]))
-
-      const candidates: Date[] = []
-      if (platformStart) { const d = new Date(platformStart); d.setHours(0, 0, 0, 0); candidates.push(d) }
-      if (employee.createdAt) { const d = new Date(employee.createdAt); d.setHours(0, 0, 0, 0); candidates.push(d) }
-      const rangeTrackingStart = candidates.length
-        ? candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
-        : null
-      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
-
-      const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
-      const rows: string[][] = []
-      for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
-        if (rangeTrackingStart && d < rangeTrackingStart) continue
-        if (d > todayMidnight) break
-        const dateStr = d.toISOString().split('T')[0]
-        if (d.getDay() === 0 || holidayMap[dateStr]) continue
-        const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
-        const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
-        const statusLabel = record.punchIn && !record.punchOut ? 'In Office'
-          : (({ full_day: 'Full Day', half_day: 'Half Day', overtime: 'Overtime', absent: 'Absent', on_leave: 'On Leave' } as Record<string, string>)[record.status] ?? record.status)
-        rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
-          record.workingHours ? formatHours(record.workingHours) : '-', statusLabel])
-      }
+      const { header, rows } = await buildEmployeeRows(rangeStart, rangeEnd)
       downloadCSV(`${employee.name}_${rangeStart}_to_${rangeEnd}.csv`, [header, ...rows])
       showExportRangeModal = false
     } finally {
@@ -488,9 +506,22 @@
 
 {#if showExportRangeModal}
   <DateRangeModal
-    title="Export {employee.name}'s Attendance"
-    loading={exportRangeLoading}
-    onConfirm={exportEmployeeCSVRange}
+    title="{employee.name}'s Attendance"
+    viewLoading={viewRangeLoading}
+    downloadLoading={exportRangeLoading}
+    onView={viewEmployeeRange}
+    onDownload={downloadEmployeeCSVRange}
     onClose={() => showExportRangeModal = false}
+  />
+{/if}
+
+{#if rangeViewData}
+  <AttendanceRangeViewModal
+    title="{employee.name}'s Attendance"
+    subtitle="{formatDate(rangeViewData.startDate)} → {formatDate(rangeViewData.endDate)}"
+    header={rangeViewData.header}
+    rows={rangeViewData.rows}
+    filename="{employee.name}_{rangeViewData.startDate}_to_{rangeViewData.endDate}.csv"
+    onClose={() => rangeViewData = null}
   />
 {/if}

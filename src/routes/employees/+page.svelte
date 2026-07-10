@@ -7,6 +7,7 @@
   import { Plus, X, UserCheck, UserX, Eye, EyeOff, Search, Trash2, Download } from 'lucide-svelte'
   import AvatarUpload from '$lib/components/AvatarUpload.svelte'
   import DateRangeModal from '$lib/components/DateRangeModal.svelte'
+  import AttendanceRangeViewModal from '$lib/components/AttendanceRangeViewModal.svelte'
   import { user as currentUser } from '$lib/stores/auth'
   import { authStore } from '$lib/stores/auth'
 
@@ -185,6 +186,7 @@
     viewEmployee = emp
     leaveSaved = false; leaveError = ''
     showExportRangeModal = false
+    rangeViewData = null
     const now = new Date()
     const [att, lb] = await Promise.all([
       api.getEmployeeAttendance(emp.id, now.getMonth() + 1, now.getFullYear()),
@@ -201,39 +203,57 @@
   }
 
   let showExportRangeModal = false
+  let viewRangeLoading = false
   let exportRangeLoading = false
+  let rangeViewData: { header: string[]; rows: string[][]; startDate: string; endDate: string } | null = null
+
+  async function buildEmployeeRows(rangeStart: string, rangeEnd: string) {
+    const records = await api.getEmployeeAttendanceRange(viewEmployee.id, rangeStart, rangeEnd)
+    const recMap: Record<string, any> = Object.fromEntries(records.map((r: any) => [r.date, r]))
+
+    const candidates: Date[] = []
+    if (platformStart) candidates.push(platformStart)
+    if (viewEmployee.createdAt) {
+      const d = new Date(viewEmployee.createdAt); d.setHours(0, 0, 0, 0)
+      candidates.push(d)
+    }
+    const rangeTrackingStart = candidates.length
+      ? candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
+      : null
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
+
+    const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
+    const rows: string[][] = []
+    for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+      if (rangeTrackingStart && d < rangeTrackingStart) continue
+      if (d > todayMidnight) break
+      if (d.getDay() === 0) continue
+      const dateStr = d.toISOString().split('T')[0]
+      const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
+      const badge = getStatusBadge(record.status)
+      const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
+      rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
+        record.workingHours ? formatHours(record.workingHours) : '-', badge.label])
+    }
+    return { header, rows, startDate: rangeStart, endDate: rangeEnd }
+  }
+
+  async function viewEmployeeRange(rangeStart: string, rangeEnd: string) {
+    if (!viewEmployee) return
+    try {
+      viewRangeLoading = true
+      rangeViewData = await buildEmployeeRows(rangeStart, rangeEnd)
+      showExportRangeModal = false
+    } finally {
+      viewRangeLoading = false
+    }
+  }
 
   async function exportEmployeeCSVRange(rangeStart: string, rangeEnd: string) {
     if (!viewEmployee) return
     try {
       exportRangeLoading = true
-      const records = await api.getEmployeeAttendanceRange(viewEmployee.id, rangeStart, rangeEnd)
-      const recMap: Record<string, any> = Object.fromEntries(records.map((r: any) => [r.date, r]))
-
-      const candidates: Date[] = []
-      if (platformStart) candidates.push(platformStart)
-      if (viewEmployee.createdAt) {
-        const d = new Date(viewEmployee.createdAt); d.setHours(0, 0, 0, 0)
-        candidates.push(d)
-      }
-      const rangeTrackingStart = candidates.length
-        ? candidates.reduce((latest, d) => d > latest ? d : latest, candidates[0])
-        : null
-      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
-
-      const header = ['Date', 'Day', 'Punch In', 'Punch Out', 'Hours', 'Status']
-      const rows: string[][] = []
-      for (let d = new Date(rangeStart + 'T00:00:00'); d <= new Date(rangeEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
-        if (rangeTrackingStart && d < rangeTrackingStart) continue
-        if (d > todayMidnight) break
-        if (d.getDay() === 0) continue
-        const dateStr = d.toISOString().split('T')[0]
-        const record = recMap[dateStr] ?? { punchIn: null, punchOut: null, workingHours: null, status: 'absent' }
-        const badge = getStatusBadge(record.status)
-        const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' })
-        rows.push([formatDate(dateStr), dayName, formatTime(record.punchIn), formatTime(record.punchOut),
-          record.workingHours ? formatHours(record.workingHours) : '-', badge.label])
-      }
+      const { header, rows } = await buildEmployeeRows(rangeStart, rangeEnd)
       downloadCSV(`${viewEmployee.name}_${rangeStart}_to_${rangeEnd}.csv`, [header, ...rows])
       showExportRangeModal = false
     } finally {
@@ -808,10 +828,23 @@
 <!-- Export Attendance Date Range Modal -->
 {#if showExportRangeModal && viewEmployee}
   <DateRangeModal
-    title="Export {viewEmployee.name}'s Attendance"
-    loading={exportRangeLoading}
-    onConfirm={exportEmployeeCSVRange}
+    title="{viewEmployee.name}'s Attendance"
+    viewLoading={viewRangeLoading}
+    downloadLoading={exportRangeLoading}
+    onView={viewEmployeeRange}
+    onDownload={exportEmployeeCSVRange}
     onClose={() => showExportRangeModal = false}
+  />
+{/if}
+
+{#if rangeViewData && viewEmployee}
+  <AttendanceRangeViewModal
+    title="{viewEmployee.name}'s Attendance"
+    subtitle="{formatDate(rangeViewData.startDate)} → {formatDate(rangeViewData.endDate)}"
+    header={rangeViewData.header}
+    rows={rangeViewData.rows}
+    filename="{viewEmployee.name}_{rangeViewData.startDate}_to_{rangeViewData.endDate}.csv"
+    onClose={() => rangeViewData = null}
   />
 {/if}
 
